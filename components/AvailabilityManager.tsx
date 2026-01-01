@@ -1,0 +1,243 @@
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useAppContext } from '../contexts/AppContext';
+import Card from './ui/Card';
+import { ChevronLeftIcon, ChevronRightIcon, PlusCircleIcon, TrashIcon, CheckCircleIcon } from './icons/Icons';
+
+// Helper functions
+const timeToMinutes = (timeStr: string): number => {
+  if (!timeStr) return NaN;
+  const [time, modifier] = timeStr.split(' ');
+  if (!time) return NaN;
+  let [hours, minutes] = time.split(':').map(Number);
+  if (isNaN(hours)) return NaN;
+  if (hours === 12) hours = modifier?.toUpperCase() === 'AM' ? 0 : 12;
+  else if (modifier?.toUpperCase() === 'PM') hours += 12;
+  return hours * 60 + (minutes || 0);
+};
+
+const DEFAULT_AVAILABILITY_KEY = 'silky_default_avail_ranges';
+
+const AvailabilityManager: React.FC = () => {
+    const { 
+        overwriteAvailabilityForDates, 
+        ownerDefinedTimeSlots, 
+        availability,
+        bookings,
+        bookingRequests
+    } = useAppContext();
+    
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    
+    // Load default ranges from storage or fallback
+    const [defaultRanges, setDefaultRanges] = useState<{start: string, end: string}[]>(() => {
+        try {
+            const stored = localStorage.getItem(DEFAULT_AVAILABILITY_KEY);
+            return stored ? JSON.parse(stored) : [{ start: '09:00 AM', end: '05:00 PM' }];
+        } catch {
+            return [{ start: '09:00 AM', end: '05:00 PM' }];
+        }
+    });
+
+    const [timeRanges, setTimeRanges] = useState<{start: string, end: string}[]>(defaultRanges);
+    const [isSaving, setIsSaving] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const selectionStarted = useRef(false);
+
+    const calendarData = useMemo(() => {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startDayOfWeek = firstDay.getDay();
+        const dates: (Date | null)[] = Array(startDayOfWeek).fill(null);
+        for (let i = 1; i <= daysInMonth; i++) dates.push(new Date(year, month, i));
+        return { dates, monthName: firstDay.toLocaleString('default', { month: 'long' }), year };
+    }, [currentMonth]);
+    
+    const handleDayClick = (dateStr: string) => {
+        setSelectedDays(prev => {
+            if (prev.includes(dateStr)) return prev.filter(d => d !== dateStr);
+            return [...prev, dateStr].sort();
+        });
+    };
+
+    useEffect(() => {
+        if (selectedDays.length > 0 && !selectionStarted.current) {
+            selectionStarted.current = true;
+            // When starting a new selection, use the previously saved defaults
+            setTimeRanges(defaultRanges);
+        } else if (selectedDays.length === 0) {
+            selectionStarted.current = false;
+        }
+    }, [selectedDays, defaultRanges]);
+
+    const handleAddRange = () => setTimeRanges([...timeRanges, { start: '09:00 AM', end: '05:00 PM' }]);
+    const handleRemoveRange = (index: number) => setTimeRanges(timeRanges.filter((_, i) => i !== index));
+    const handleRangeChange = (index: number, field: 'start' | 'end', value: string) => {
+        const newRanges = [...timeRanges];
+        newRanges[index][field] = value;
+        setTimeRanges(newRanges);
+    };
+
+    const checkConflicts = () => {
+        return selectedDays.some(date => 
+            bookings.some(b => b.date === date) || 
+            bookingRequests.some(r => r.date === date)
+        );
+    };
+
+    const handleSave = async () => {
+        if (selectedDays.length === 0) return;
+
+        if (checkConflicts() && timeRanges.length === 0) {
+            const proceed = window.confirm(
+                "Warning: You are clearing availability for dates that currently have appointments. " +
+                "Confirmed appointments will REMAIN booked until manually cancelled. Proceed?"
+            );
+            if (!proceed) return;
+        } else if (checkConflicts()) {
+            const proceed = window.confirm(
+                "Warning: Some selected dates have existing appointments or requests. " +
+                "Changing availability will NOT cancel existing bookings. " +
+                "You must manage those manually. Proceed?"
+            );
+            if (!proceed) return;
+        }
+
+        setIsSaving(true);
+        // If timeRanges is empty, overwriteAvailabilityForDates will effectively clear slots for these dates
+        await overwriteAvailabilityForDates(selectedDays, timeRanges);
+        
+        // Save current configuration as new default (only if not empty, otherwise keep previous defaults for next time)
+        if (timeRanges.length > 0) {
+            setDefaultRanges(timeRanges);
+            localStorage.setItem(DEFAULT_AVAILABILITY_KEY, JSON.stringify(timeRanges));
+        }
+
+        setIsSaving(false);
+        setShowConfirmation(true);
+        
+        // Reset state to "reload" the view as requested
+        setTimeout(() => {
+            setShowConfirmation(false);
+            setSelectedDays([]); // Remove selection highlights
+        }, 1200);
+    };
+
+    return (
+        <Card className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                    <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() - 1)))} className="p-2 rounded-full hover:bg-gray-200 text-black transition-colors"><ChevronLeftIcon className="h-5 w-5" /></button>
+                    <h3 className="text-lg font-bold text-black">{calendarData.monthName} {calendarData.year}</h3>
+                    <button onClick={() => setCurrentMonth(new Date(currentMonth.setMonth(currentMonth.getMonth() + 1)))} className="p-2 rounded-full hover:bg-gray-200 text-black transition-colors"><ChevronRightIcon className="h-5 w-5" /></button>
+                </div>
+                <div className="grid grid-cols-7 gap-1 text-center text-sm font-bold text-gray-800 mb-2">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => <div key={day}>{day}</div>)}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                    {calendarData.dates.map((date, index) => {
+                        if (!date) return <div key={`empty-${index}`}></div>;
+                        const dateStr = date.toISOString().split('T')[0];
+                        const isSelected = selectedDays.includes(dateStr);
+                        const hasAvail = (availability[dateStr] || []).length > 0;
+                        const hasBookings = bookings.some(b => b.date === dateStr) || bookingRequests.some(r => r.date === dateStr);
+                        
+                        let btnClass = 'h-10 w-10 rounded-lg transition-colors duration-200 text-sm flex items-center justify-center relative font-bold ';
+                        if (isSelected) btnClass += 'bg-pink-600 text-white shadow-lg';
+                        else btnClass += 'bg-white border border-gray-200 hover:bg-pink-100 text-gray-900';
+                        
+                        return (
+                            <button key={dateStr} onClick={() => handleDayClick(dateStr)} className={btnClass}>
+                                {date.getDate()}
+                                {hasAvail && !isSelected && (
+                                    <span className={`absolute bottom-1.5 h-1.5 w-1.5 rounded-full ${hasBookings ? 'bg-indigo-500' : 'bg-green-500'}`}></span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+                <div className="mt-4 flex gap-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    <div className="flex items-center gap-1"><span className="h-2 w-2 bg-green-500 rounded-full"></span> Available</div>
+                    <div className="flex items-center gap-1"><span className="h-2 w-2 bg-indigo-500 rounded-full"></span> Has Bookings</div>
+                </div>
+            </div>
+            <div>
+                <h3 className="text-lg font-bold text-black mb-2">Selected Dates</h3>
+                {selectedDays.length > 0 ? (
+                     <div className="mb-4 text-sm text-pink-800 font-bold bg-pink-50 border border-pink-200 p-3 rounded-lg">
+                        {selectedDays.length === 1 ? new Date(selectedDays[0]).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }) : `${selectedDays.length} dates selected`}
+                    </div>
+                ): (
+                    <p className="text-sm text-gray-600 mb-4 font-medium">Select dates from the calendar to set hours.</p>
+                )}
+
+                {selectedDays.length > 0 && (
+                <>
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-lg font-bold text-black">Available Hours</h3>
+                    </div>
+                    
+                    <datalist id="time-slots">
+                        {ownerDefinedTimeSlots.map(t => <option key={t} value={t} />)}
+                    </datalist>
+
+                     <div className="space-y-3 max-h-48 overflow-y-auto pr-2 mb-4">
+                        {timeRanges.map((range, index) => (
+                            <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-300 rounded-lg">
+                                <div className="grid grid-cols-2 gap-2 flex-1">
+                                    <input
+                                        type="text"
+                                        list="time-slots"
+                                        value={range.start}
+                                        onChange={e => handleRangeChange(index, 'start', e.target.value)}
+                                        className="w-full p-2 border border-gray-400 rounded-md text-sm bg-white text-black font-medium"
+                                        placeholder="e.g., 9:00 AM"
+                                    />
+                                    <input
+                                        type="text"
+                                        list="time-slots"
+                                        value={range.end}
+                                        onChange={e => handleRangeChange(index, 'end', e.target.value)}
+                                        className="w-full p-2 border border-gray-400 rounded-md text-sm bg-white text-black font-medium"
+                                        placeholder="e.g., 5:00 PM"
+                                    />
+                                </div>
+                                <button onClick={() => handleRemoveRange(index)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors" title="Remove row">
+                                    <TrashIcon className="h-5 w-5"/>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                        <button onClick={handleAddRange} className="text-sm flex items-center gap-2 text-pink-700 hover:text-pink-900 font-bold transition-colors">
+                            <PlusCircleIcon className="h-5 w-5" /> Add Time Range
+                        </button>
+                        
+                        <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl">
+                            <p className="text-xs text-blue-800 font-bold">
+                                💡 Note: To clear availability for the day, press the trash icon to remove all rows, then press save.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-gray-200 flex justify-end">
+                        <button 
+                            onClick={handleSave} 
+                            disabled={isSaving || selectedDays.length === 0} 
+                            className="px-6 py-3 w-full sm:w-48 text-center bg-pink-600 text-white rounded-xl hover:bg-pink-700 transition-all duration-300 disabled:bg-pink-300 disabled:cursor-not-allowed flex items-center justify-center font-black shadow-lg shadow-pink-200"
+                        >
+                            {showConfirmation ? <CheckCircleIcon className="h-6 w-6 text-white"/> : (isSaving ? 'Updating...' : 'Save Changes')}
+                        </button>
+                    </div>
+                </>
+                )}
+            </div>
+        </Card>
+    );
+};
+
+export default AvailabilityManager;
