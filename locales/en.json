@@ -1,0 +1,181 @@
+{
+    "auth": {
+        "clientAccess": "Client Access",
+        "ownerAccess": "Owner Access",
+        "clientSignIn": "Client Sign In",
+        "createAccount": "Create Account",
+        "ownerLogin": "Owner Login",
+        "signIn": "Sign In",
+        "signUp": "Sign Up",
+        "register": "Register",
+        "email": "Email Address",
+        "password": "Password",
+        "repeatPassword": "Repeat Password",
+        "fullName": "Full Name",
+        "forgotPassword": "Forgot Password?",
+        "forgotOwnerPassword": "Forgot Owner Password?",
+        "processing": "Processing...",
+        "dontHaveAccount": "Don't have an account?",
+        "alreadyHaveAccount": "Already have an account?",
+        "ownerManualAuth": "Note: Owner accounts must be manually authorized.",
+        "backToLogin": "Back to Login",
+        "resetPassword": "Reset Password",
+        "resetPasswordDesc": "Enter your email to receive a password reset link.",
+        "sendResetLink": "Send Reset Link",
+        "sending": "Sending...",
+        "verifyEmailTitle": "Verify your Email",
+        "verifyEmailDesc": "We have sent a verification email to",
+        "verifyEmailCheck": "Please check your inbox and click the link to verify your account before logging in.",
+        "backToSignIn": "Back to Sign In",
+        "errorMismatch": "Passwords do not match",
+        "errorLength": "Password must be at least 6 characters",
+        "errorInvalidCreds": "Password or Email Incorrect",
+        "errorGenericSignIn": "Failed to sign in. Please check your credentials.",
+        "errorExists": "User already exists. Sign in?",
+        "errorGenericSignUp": "Failed to sign up",
+        "placeholderName": "Your Name",
+        "placeholderNameOwner": "Laura Assuncao",
+        "placeholderEmail": "you@example.com",
+        "placeholderEmailOwner": "laura@silkyhair.com"
+    },
+    "common": {
+        "welcome": "Silky Hair Straightening"
+    },
+    "user": {
+        "tabs": {
+            "book": "Book Treatment",
+            "appointments": "My Appointments",
+            "inquiries": "My Inquiries",
+            "profile": "My Profile"
+        },
+        "booking": {
+            "selectService": "Select a Service",
+            "minutes": "Minutes",
+            "confirmRequest": "Confirm Your Request",
+            "backToTimes": "Back to times",
+            "changeService": "Change Service",
+            "service": "Service",
+            "date": "Date",
+            "time": "Time",
+            "price": "Price",
+            "notesLabel": "Add any notes for Laura (optional)",
+            "notesPlaceholder": "e.g., I have very thick hair...",
+            "sendRequest": "Send Booking Request",
+            "successMessage": "Request sent! Laura will review your appointment for {{serviceName}}.",
+            "failureMessage": "Failed to send booking request. Please try again.",
+            "selectDate": "Select Date",
+            "availableTimes": "Available Times",
+            "noSlots": "No slots available for this date.",
+            "tryAnotherDay": "Try selecting another day.",
+            "selectDatePrompt": "Please select a date on the calendar"
+        },
+        "appointments": {
+            "pending": "Pending Approval",
+            "awaitingOwner": "Awaiting Owner",
+            "upcoming": "Upcoming Appointments",
+            "confirmed": "Confirmed",
+            "noUpcoming": "No upcoming appointments",
+            "history": "History"
+        },
+        "inquiries": {
+            "conversations": "Conversations",
+            "noMessages": "No messages yet.",
+            "salonOwner": "Salon Owner",
+            "you": "You",
+            "laura": "Laura",
+            "writeReply": "Write a reply...",
+            "newInquiry": "New Inquiry",
+            "subject": "Subject",
+            "subjectPlaceholder": "e.g., Appointment Question",
+            "message": "Message",
+            "messagePlaceholder": "How can Laura help you?",
+            "sendMessage": "Send Message",
+            "sending": "Sending...",
+            "sentSuccess": "Your message has been sent to Laura."
+        },
+        "profile": {
+            "role": "Role",
+            "verifiedClient": "Verified Client",
+            "status": "Local Mode Status",
+            "storage": "Browser Data Storage"
+        }
+    },
+    "owner": {
+        "tabs": {
+            "schedule": "Schedule",
+            "requests": "Requests",
+            "clients": "Clients",
+            "inbox": "Inbox"
+        },
+        "schedule": {
+            "appointments": "Appointments",
+            "availability": "Availability",
+            "addBooking": "Add Booking",
+            "manualBookingTitle": "Add Booking",
+            "registeredClient": "Registered Client (Optional)",
+            "selectClient": "-- Select or type below --",
+            "customerName": "Customer Name",
+            "customerEmail": "Customer Email",
+            "date": "Date",
+            "time": "Time",
+            "service": "Service",
+            "confirmAppointment": "Confirm Appointment",
+            "bookingAdded": "Booking added!",
+            "noAppointments": "No appointments for this day",
+            "preSetAvailability": "Pre-set Availability",
+            "noSpecificHours": "No specific hours defined"
+        },
+        "requests": {
+            "pendingTitle": "Pending Requests",
+            "total": "Total",
+            "approveEmail": "Approve & Email",
+            "noPending": "No pending requests",
+            "emailSubject": "Appointment Confirmed - Silky Hair Straightening",
+            "emailBody": "Hi {{name}},\\n\\nYour appointment for {{service}} has been confirmed!\\n\\nDetails:\\nDate: {{date}}\\nTime: {{time}}\\n\\nWe look forward to seeing you at the salon.\\n\\nBest regards,\\nLaura Assuncao\\nSilky Hair Straightening"
+        },
+        "clients": {
+            "privateNotes": "Private Owner Notes",
+            "placeholderNotes": "Add private details about this client...",
+            "saveNotes": "Save Client Notes",
+            "successNotes": "Client notes updated successfully."
+        },
+        "availability": {
+            "clearButton": "Clear Availability",
+            "confirmClear": "Are you sure you want to clear availability for the selected dates?",
+            "confirmClearWithConflicts": "Warning: There are existing bookings on the selected dates. Clearing availability will NOT delete these bookings. You must move them manually. Proceed?",
+            "clearing": "Clearing...",
+            "cleared": "Availability cleared!"
+        },
+        "ai": {
+            "title": "AI Assistant",
+            "placeholder": "Type or speak a command (e.g., 'Clear availability for tomorrow')",
+            "startListening": "Start Listening",
+            "stopListening": "Stop Listening",
+            "processing": "Analyzing...",
+            "execute": "Execute",
+            "cancel": "Cancel",
+            "success": "Action completed successfully!",
+            "error": "Error processing command.",
+            "confirmTitle": "Confirmation Required",
+            "listening": "Listening..."
+        },
+        "inbox": {
+            "title": "Inbox",
+            "compose": "Compose New Message",
+            "recipient": "Recipient",
+            "selectClient": "-- Select Client --",
+            "subject": "Subject",
+            "subjectPlaceholder": "e.g., Regarding your appointment tomorrow",
+            "message": "Message",
+            "messagePlaceholder": "Type your message...",
+            "sendMessage": "Send Message",
+            "sending": "Sending...",
+            "writeReply": "Write a reply...",
+            "selectInquiry": "Select an inquiry or click '+' to compose"
+        },
+        "actions": {
+            "cancelConfirm": "Are you sure you want to CANCEL the appointment for {{name}} on {{date}} at {{time}}?",
+            "ownerNotesPrompt": "Owner Notes for this appointment:"
+        }
+    }
+}

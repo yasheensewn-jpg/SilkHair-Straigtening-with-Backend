@@ -36,17 +36,15 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-            {authStatus === 'authenticated' && <Header />}
+            <Header />
             <main className="p-4 sm:p-6 md:p-8">
                 <div className="max-w-7xl mx-auto">
                     {renderContent()}
                 </div>
             </main>
-            {authStatus === 'authenticated' && (
-                <footer className="text-center p-4 mt-8 text-gray-600 text-sm">
-                    <p>&copy; {new Date().getFullYear()} Silky Hair Straightening. All rights reserved.</p>
-                </footer>
-            )}
+            <footer className="text-center p-4 mt-8 text-gray-600 text-sm">
+                <p>&copy; {new Date().getFullYear()} Silky Hair Straightening. All rights reserved.</p>
+            </footer>
         </div>
     );
 };

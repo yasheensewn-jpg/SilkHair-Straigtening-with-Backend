@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { CutIcon, EyeIcon, EyeSlashIcon, OwnerIcon, UserIcon, MailIcon } from './icons/Icons';
 import Card from './ui/Card';
+import { useTranslation } from 'react-i18next';
 
 const AuthView: React.FC = () => {
     const { login, signup, verifyUserEmail, resetPassword } = useAppContext();
+    const { t } = useTranslation();
     const [userType, setUserType] = useState<'client' | 'owner'>('client');
     const [isLoginMode, setIsLoginMode] = useState(true);
 
@@ -40,10 +42,10 @@ const AuthView: React.FC = () => {
             } else {
                 // Validation
                 if (password !== repeatPassword) {
-                    throw new Error("Passwords do not match");
+                    throw new Error(t('auth.errorMismatch'));
                 }
                 if (password.length < 6) {
-                    throw new Error("Password must be at least 6 characters");
+                    throw new Error(t('auth.errorLength'));
                 }
                 await signup(email, password, name);
                 // Switch to verification mode instead of logging in
@@ -61,17 +63,17 @@ const AuthView: React.FC = () => {
                     err.code === 'auth/user-not-found' ||
                     err.code === 'auth/invalid-email'
                 ) {
-                    setError("Password or Email Incorrect");
+                    setError(t('auth.errorInvalidCreds'));
                 } else {
-                    setError("Failed to sign in. Please check your credentials.");
+                    setError(t('auth.errorGenericSignIn'));
                 }
             } else {
                 if (err.code === 'auth/email-already-in-use') {
-                    setError("User already exists. Sign in?");
-                } else if (err.message === "Passwords do not match") {
-                    setError("Passwords do not match");
+                    setError(t('auth.errorExists'));
+                } else if (err.message === t('auth.errorMismatch') || err.message === "Passwords do not match") {
+                    setError(t('auth.errorMismatch'));
                 } else {
-                    setError(err.message || "Failed to sign up");
+                    setError(err.message || t('auth.errorGenericSignUp'));
                 }
             }
         } finally {
@@ -117,19 +119,19 @@ const AuthView: React.FC = () => {
                 </div>
                 <Card className="w-full max-w-md p-8 shadow-xl bg-white border border-gray-300 text-center">
                     <MailIcon className="h-16 w-16 text-pink-600 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-black mb-2">Verify your Email</h2>
+                    <h2 className="text-2xl font-bold text-black mb-2">{t('auth.verifyEmailTitle')}</h2>
                     <p className="text-gray-600 mb-6">
-                        We have sent a verification email to <span className="font-bold text-black">{verificationSentTo}</span>.
+                        {t('auth.verifyEmailDesc')} <span className="font-bold text-black">{verificationSentTo}</span>.
                     </p>
                     <p className="text-sm text-gray-500 mb-8">
-                        Please check your inbox and click the link to verify your account before logging in.
+                        {t('auth.verifyEmailCheck')}
                     </p>
 
                     <button
                         onClick={() => { setVerificationSentTo(null); setIsLoginMode(true); }}
                         className="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded transition-colors"
                     >
-                        Back to Sign In
+                        {t('auth.backToSignIn')}
                     </button>
                 </Card>
             </div>
@@ -143,9 +145,9 @@ const AuthView: React.FC = () => {
                     <CutIcon className="h-16 w-16 text-pink-600 mx-auto" />
                 </div>
                 <Card className="w-full max-w-md p-8 shadow-xl bg-white border border-gray-300 text-center">
-                    <h2 className="text-2xl font-bold text-black mb-2">Reset Password</h2>
+                    <h2 className="text-2xl font-bold text-black mb-2">{t('auth.resetPassword')}</h2>
                     <p className="text-gray-600 mb-6">
-                        Enter your email to receive a password reset link.
+                        {t('auth.resetPasswordDesc')}
                     </p>
 
                     {error && (
@@ -161,14 +163,14 @@ const AuthView: React.FC = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full p-3 border border-gray-400 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-black bg-white placeholder-gray-500"
-                            placeholder="you@example.com"
+                            placeholder={t('auth.placeholderEmail')}
                         />
                         <button
                             type="submit"
                             disabled={loading}
                             className="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded transition-colors"
                         >
-                            {loading ? 'Sending...' : 'Send Reset Link'}
+                            {loading ? t('auth.sending') : t('auth.sendResetLink')}
                         </button>
                     </form>
 
@@ -176,7 +178,7 @@ const AuthView: React.FC = () => {
                         onClick={() => { setIsResetMode(false); setError(null); }}
                         className="mt-6 text-pink-600 hover:text-pink-800 font-bold text-sm"
                     >
-                        Back to Login
+                        {t('auth.backToLogin')}
                     </button>
                 </Card>
             </div>
@@ -188,7 +190,7 @@ const AuthView: React.FC = () => {
             <div className="text-center mb-8">
                 <CutIcon className="h-16 w-16 text-pink-600 mx-auto" />
                 <h1 className="text-4xl font-extrabold text-black tracking-tight mt-4">
-                    Silky Hair Straightening
+                    {t('common.welcome')}
                 </h1>
             </div>
 
@@ -201,7 +203,7 @@ const AuthView: React.FC = () => {
                     >
                         <div className="flex items-center justify-center gap-2">
                             <UserIcon className="h-5 w-5" />
-                            Client Access
+                            {t('auth.clientAccess')}
                         </div>
                     </button>
                     <button
@@ -210,7 +212,7 @@ const AuthView: React.FC = () => {
                     >
                         <div className="flex items-center justify-center gap-2">
                             <OwnerIcon className="h-5 w-5" />
-                            Owner Access
+                            {t('auth.ownerAccess')}
                         </div>
                     </button>
                 </div>
@@ -218,17 +220,17 @@ const AuthView: React.FC = () => {
                 <div className="p-8">
                     <h2 className="text-2xl font-bold text-black mb-6 text-center">
                         {userType === 'owner'
-                            ? 'Owner Login'
-                            : (isLoginMode ? 'Client Sign In' : 'Create Account')
+                            ? t('auth.ownerLogin')
+                            : (isLoginMode ? t('auth.clientSignIn') : t('auth.createAccount'))
                         }
                     </h2>
 
                     {error && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-300 text-red-800 text-sm rounded-md text-center font-medium">
                             {error}
-                            {error === "User already exists. Sign in?" && (
+                            {error === t('auth.errorExists') && (
                                 <button onClick={handleSwitchToSignIn} className="ml-2 underline font-bold hover:text-red-900">
-                                    Sign in
+                                    {t('auth.signIn')}
                                 </button>
                             )}
                         </div>
@@ -237,7 +239,7 @@ const AuthView: React.FC = () => {
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {!isLoginMode && (
                             <div>
-                                <label className="block text-sm font-bold text-gray-800 mb-1" htmlFor="name">Full Name</label>
+                                <label className="block text-sm font-bold text-gray-800 mb-1" htmlFor="name">{t('auth.fullName')}</label>
                                 <input
                                     id="name"
                                     name="name"
@@ -246,14 +248,14 @@ const AuthView: React.FC = () => {
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     className="w-full p-3 border border-gray-400 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-black bg-white placeholder-gray-500"
-                                    placeholder={userType === 'owner' ? "Laura Assuncao" : "Your Name"}
+                                    placeholder={userType === 'owner' ? t('auth.placeholderNameOwner') : t('auth.placeholderName')}
                                     autoComplete="name"
                                 />
                             </div>
                         )}
 
                         <div>
-                            <label className="block text-sm font-bold text-gray-800 mb-1" htmlFor="email">Email Address</label>
+                            <label className="block text-sm font-bold text-gray-800 mb-1" htmlFor="email">{t('auth.email')}</label>
                             <input
                                 id="email"
                                 name="email"
@@ -262,7 +264,7 @@ const AuthView: React.FC = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full p-3 border border-gray-400 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-black bg-white placeholder-gray-500"
-                                placeholder={userType === 'owner' ? "laura@silkyhair.com" : "you@example.com"}
+                                placeholder={userType === 'owner' ? t('auth.placeholderEmailOwner') : t('auth.placeholderEmail')}
                                 autoComplete="username email"
                             />
                         </div>
@@ -270,14 +272,14 @@ const AuthView: React.FC = () => {
                         {!isResetMode && (
                             <div>
                                 <div className="flex justify-between items-center mb-1">
-                                    <label className="block text-sm font-bold text-gray-800" htmlFor="password">Password</label>
+                                    <label className="block text-sm font-bold text-gray-800" htmlFor="password">{t('auth.password')}</label>
                                     {isLoginMode && (
                                         <button
                                             type="button"
                                             onClick={() => { setIsResetMode(true); setError(null); }}
                                             className="text-xs text-pink-600 hover:text-pink-800 font-bold"
                                         >
-                                            Forgot Password?
+                                            {t('auth.forgotPassword')}
                                         </button>
                                     )}
                                 </div>
@@ -306,7 +308,7 @@ const AuthView: React.FC = () => {
 
                         {!isLoginMode && (
                             <div>
-                                <label className="block text-sm font-bold text-gray-800 mb-1" htmlFor="repeatPassword">Repeat Password</label>
+                                <label className="block text-sm font-bold text-gray-800 mb-1" htmlFor="repeatPassword">{t('auth.repeatPassword')}</label>
                                 <div className="relative">
                                     <input
                                         id="repeatPassword"
@@ -335,31 +337,31 @@ const AuthView: React.FC = () => {
                             disabled={loading}
                             className={`w-full py-3 px-4 text-white font-bold rounded-lg transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed mt-6 ${userType === 'owner' ? 'bg-purple-700 hover:bg-purple-800' : 'bg-pink-600 hover:bg-pink-700'}`}
                         >
-                            {loading ? 'Processing...' : (isLoginMode ? 'Sign In' : 'Sign Up')}
+                            {loading ? t('auth.processing') : (isLoginMode ? t('auth.signIn') : t('auth.signUp'))}
                         </button>
                     </form>
 
                     <div className="mt-6 text-center border-t border-gray-200 pt-4">
                         {userType === 'client' && (
                             <p className="text-sm text-gray-700">
-                                {isLoginMode ? "Don't have an account?" : "Already have an account?"}
+                                {isLoginMode ? t('auth.dontHaveAccount') : t('auth.alreadyHaveAccount')}
                                 <button
                                     onClick={switchMode}
                                     className="ml-2 font-bold hover:underline focus:outline-none text-pink-700"
                                 >
-                                    {isLoginMode ? 'Register' : 'Sign In'}
+                                    {isLoginMode ? t('auth.register') : t('auth.signIn')}
                                 </button>
                             </p>
                         )}
                         {userType === 'owner' && (
                             <p className="text-sm text-gray-500 italic">
-                                Note: Owner accounts must be manually authorized.
+                                {t('auth.ownerManualAuth')}
                                 <br />
                                 <button
                                     onClick={() => { setIsResetMode(true); setError(null); }}
                                     className="text-xs text-purple-700 hover:text-purple-900 font-bold mt-2"
                                 >
-                                    Forgot Owner Password?
+                                    {t('auth.forgotOwnerPassword')}
                                 </button>
                             </p>
                         )}
@@ -374,3 +376,4 @@ const AuthView: React.FC = () => {
 };
 
 export default AuthView;
+

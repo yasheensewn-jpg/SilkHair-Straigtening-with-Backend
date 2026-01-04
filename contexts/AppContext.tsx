@@ -78,6 +78,8 @@ interface AppContextType {
     markThreadAsRead: (threadId: string) => Promise<void>;
     deleteClient: (clientId: string) => Promise<void>;
     updateClientNotes: (clientId: string, notes: string) => Promise<void>;
+    deleteMessage: (messageId: string) => Promise<void>;
+    deleteThread: (threadId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -361,9 +363,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     const clearAvailabilityForDates = async (dates: string[]) => {
-        await Promise.all(dates.map(date =>
-            deleteDoc(doc(db, 'availability', date))
-        ));
+        try {
+            await Promise.all(dates.map(date =>
+                deleteDoc(doc(db, 'availability', date))
+            ));
+        } catch (error) {
+            console.error("clearAvailabilityForDates failed:", error);
+        }
     };
 
     const sendMessage = async (recipientId: string, subject: string, body: string, threadId?: string) => {
@@ -426,6 +432,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const ownerDefinedTimeSlots = generateTimeSlots();
 
+    const deleteMessage = async (messageId: string) => {
+        await deleteDoc(doc(db, 'messages', messageId));
+    };
+
+    const deleteThread = async (threadId: string) => {
+        const msgsRef = collection(db, 'messages');
+        const q = query(msgsRef, where('threadId', '==', threadId));
+        const snapshot = await getDocs(q);
+        const batch = snapshot.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(batch);
+    };
+
+    // Auto-deletion of messages older than 1 year
+    useEffect(() => {
+        const runRetentionPolicy = async () => {
+            if (currentUser?.role !== 'owner') return;
+
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            const cutoff = oneYearAgo.toISOString();
+
+            // We can query purely by date if possible, or fetch all and filter if no index
+            // Ideally: where('timestamp', '<', cutoff)
+            // But let's check matches on our locally synced 'messages' array? 
+            // No, that depends on snapshot. Let's do a one-off query on mount.
+
+            const msgsRef = collection(db, 'messages');
+            const q = query(msgsRef, where('timestamp', '<', cutoff));
+
+            try {
+                const snapshot = await getDocs(q);
+                if (!snapshot.empty) {
+                    console.log(`Retention Policy: Deleting ${snapshot.size} old messages.`);
+                    const batch = snapshot.docs.map(d => deleteDoc(d.ref));
+                    await Promise.all(batch);
+                }
+            } catch (error) {
+                // If index missing, this might fail. Fallback: silent fail or manual check
+                console.warn("Retention policy check failed (likely missing index):", error);
+            }
+        };
+
+        if (currentUser) {
+            runRetentionPolicy();
+        }
+    }, [currentUser]);
+
     return (
         <AppContext.Provider value={{
             authStatus, currentUser, login, signup, loginWithGoogle, logout, resetPassword,
@@ -433,7 +486,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             services, bookings, bookingRequests, availability, clients, messages,
             addBookingRequest, confirmBookingRequest, declineBookingRequest, cancelBooking, updateBooking, addManualBooking,
             getCalculatedAvailableSlots, ownerDefinedTimeSlots, overwriteAvailabilityForDates, clearAvailabilityForDates,
-            sendMessage, markMessageAsRead, markThreadAsRead, deleteClient, updateClientNotes
+            sendMessage, markMessageAsRead, markThreadAsRead, deleteClient, updateClientNotes,
+            deleteMessage, deleteThread
         }}>
             {children}
         </AppContext.Provider>

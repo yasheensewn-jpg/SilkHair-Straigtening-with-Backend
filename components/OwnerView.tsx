@@ -2,34 +2,39 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { Message, Client, Booking } from '../types';
 import Card from './ui/Card';
-import { MailIcon, PaperAirplaneIcon, CalendarIcon, PlusCircleIcon, ClockIcon, UsersIcon, CheckCircleIcon, ChevronLeftIcon } from './icons/Icons';
+import { MailIcon, PhoneIcon, CalendarIcon, ClockIcon, CutIcon, CheckCircleIcon, ChevronLeftIcon, UserCircleIcon, PaperAirplaneIcon, TrashIcon, UsersIcon, SparklesIcon, PlusCircleIcon } from './icons/Icons';
 import MonthlyCalendar from './MonthlyCalendar';
 import DayPreview from './DayPreview';
 import AvailabilityManager from './AvailabilityManager';
+import AIAssistant from './AIAssistant';
+import { useTranslation } from 'react-i18next';
 
 const OwnerView: React.FC = () => {
-    const { 
-        bookings, 
-        bookingRequests, 
-        confirmBookingRequest, 
-        cancelBooking, 
+    const {
+        bookings,
+        bookingRequests,
+        confirmBookingRequest,
+        cancelBooking,
         updateBooking,
-        clients, 
-        messages, 
-        sendMessage, 
+        clients,
+        messages,
+        sendMessage,
         markThreadAsRead,
         availability,
         services,
         addManualBooking,
-        updateClientNotes
+        updateClientNotes,
+        deleteMessage,
+        deleteThread
     } = useAppContext();
+    const { t, i18n } = useTranslation();
 
-    const [currentTab, setCurrentTab] = useState<'schedule' | 'requests' | 'clients' | 'messages'>('schedule');
+    const [currentTab, setCurrentTab] = useState<'schedule' | 'requests' | 'clients' | 'messages' | 'ai'>('schedule');
     const [scheduleSubTab, setScheduleSubTab] = useState<'view' | 'availability' | 'manual'>('view');
-    
+
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [currentMonth, setCurrentMonth] = useState(new Date());
-    
+
     // Manual Booking Form State
     const [manualForm, setManualForm] = useState({
         serviceId: services[0]?.id || '',
@@ -55,9 +60,9 @@ const OwnerView: React.FC = () => {
     const selectedDateStr = selectedDate.toISOString().split('T')[0];
 
     // Badge Calculations
-    const unreadMessagesCount = useMemo(() => 
-        messages.filter(m => m.recipientId === 'owner-1' && !m.read).length, 
-    [messages]);
+    const unreadMessagesCount = useMemo(() =>
+        messages.filter(m => m.recipientId === 'owner-1' && !m.read).length,
+        [messages]);
 
     const pendingRequestsCount = bookingRequests.length;
 
@@ -76,7 +81,7 @@ const OwnerView: React.FC = () => {
             groups[msg.threadId].messages.push(msg);
             if (msg.recipientId === 'owner-1' && !msg.read) groups[msg.threadId].unreadCount++;
         });
-        
+
         return Object.entries(groups)
             .map(([id, data]) => ({ id, ...data }))
             .sort((a, b) => {
@@ -118,7 +123,7 @@ const OwnerView: React.FC = () => {
         e.preventDefault();
         const service = services.find(s => s.id === manualForm.serviceId);
         if (!service) return;
-        
+
         await addManualBooking({
             service,
             date: manualForm.date,
@@ -126,8 +131,8 @@ const OwnerView: React.FC = () => {
             customerName: manualForm.customerName,
             customerEmail: manualForm.customerEmail
         });
-        
-        alert('Booking added!');
+
+        alert(t('owner.schedule.bookingAdded'));
         setManualForm({ ...manualForm, customerName: '', customerEmail: '' });
         setScheduleSubTab('view');
     };
@@ -170,18 +175,14 @@ const OwnerView: React.FC = () => {
         await confirmBookingRequest(requestId);
 
         // Generate the confirmation email mailto link
-        const subject = encodeURIComponent("Appointment Confirmed - Silky Hair Straightening");
-        const body = encodeURIComponent(
-            `Hi ${req.customerName},\n\n` +
-            `Your appointment for ${req.service.name} has been confirmed!\n\n` +
-            `Details:\n` +
-            `Date: ${new Date(req.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}\n` +
-            `Time: ${req.time}\n\n` +
-            `We look forward to seeing you at the salon.\n\n` +
-            `Best regards,\n` +
-            `Laura Assuncao\n` +
-            `Silky Hair Straightening`
-        );
+        const subject = encodeURIComponent(t('owner.requests.emailSubject'));
+        const bodyContent = t('owner.requests.emailBody', {
+            name: req.customerName,
+            service: req.service.name,
+            date: new Date(req.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+            time: req.time
+        });
+        const body = encodeURIComponent(bodyContent);
 
         // Open owner's system email client
         window.location.href = `mailto:${req.customerEmail}?subject=${subject}&body=${body}`;
@@ -190,13 +191,13 @@ const OwnerView: React.FC = () => {
     const handleCancelWithConfirm = async (bookingId: string) => {
         const booking = bookings.find(b => b.id === bookingId);
         if (!booking) return;
-        if (window.confirm(`Are you sure you want to CANCEL the appointment for ${booking.customerName} on ${booking.date} at ${booking.time}?`)) {
+        if (window.confirm(t('owner.actions.cancelConfirm', { name: booking.customerName, date: booking.date, time: booking.time }))) {
             await cancelBooking(bookingId);
         }
     };
 
     const handleUpdateBookingNotes = async (booking: Booking) => {
-        const newNotes = window.prompt("Owner Notes for this appointment:", booking.ownerNotes || "");
+        const newNotes = window.prompt(t('owner.actions.ownerNotesPrompt'), booking.ownerNotes || "");
         if (newNotes !== null) {
             await updateBooking(booking.id, { ownerNotes: newNotes });
         }
@@ -206,7 +207,7 @@ const OwnerView: React.FC = () => {
         const notes = editingClientNotes[clientId];
         if (notes !== undefined) {
             await updateClientNotes(clientId, notes);
-            alert("Client notes updated successfully.");
+            alert(t('owner.clients.successNotes'));
         }
     };
 
@@ -214,13 +215,13 @@ const OwnerView: React.FC = () => {
         <div className="space-y-6">
             <div className="flex gap-4 border-b border-gray-200">
                 {[
-                    { id: 'view', label: 'Appointments' },
-                    { id: 'availability', label: 'Availability' },
-                    { id: 'manual', label: 'Add Booking' }
+                    { id: 'view', label: t('owner.schedule.appointments') },
+                    { id: 'availability', label: t('owner.schedule.availability') },
+                    { id: 'manual', label: t('owner.schedule.addBooking') }
                 ].map(sub => (
-                    <button 
-                        key={sub.id} 
-                        onClick={() => setScheduleSubTab(sub.id as any)} 
+                    <button
+                        key={sub.id}
+                        onClick={() => setScheduleSubTab(sub.id as any)}
                         className={`pb-4 px-2 text-sm font-bold transition-all border-b-2 ${scheduleSubTab === sub.id ? 'border-pink-600 text-pink-600' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
                     >
                         {sub.label}
@@ -231,22 +232,22 @@ const OwnerView: React.FC = () => {
             {scheduleSubTab === 'view' && (
                 <div className="grid lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
-                        <MonthlyCalendar 
-                            currentMonth={currentMonth} 
-                            setCurrentMonth={setCurrentMonth} 
-                            selectedDate={selectedDate} 
-                            setSelectedDate={setSelectedDate} 
-                            bookings={bookings} 
-                            availability={availability} 
+                        <MonthlyCalendar
+                            currentMonth={currentMonth}
+                            setCurrentMonth={setCurrentMonth}
+                            selectedDate={selectedDate}
+                            setSelectedDate={setSelectedDate}
+                            bookings={bookings}
+                            availability={availability}
                         />
                     </div>
                     <div className="lg:col-span-1">
-                        <DayPreview 
-                            date={selectedDate} 
-                            bookings={bookings.filter(b => b.date === selectedDateStr)} 
-                            availability={availability[selectedDateStr] || []} 
-                            onEditBooking={handleUpdateBookingNotes} 
-                            onCancelBooking={handleCancelWithConfirm} 
+                        <DayPreview
+                            date={selectedDate}
+                            bookings={bookings.filter(b => b.date === selectedDateStr)}
+                            availability={availability[selectedDateStr] || []}
+                            onEditBooking={handleUpdateBookingNotes}
+                            onCancelBooking={handleCancelWithConfirm}
                         />
                     </div>
                 </div>
@@ -258,16 +259,16 @@ const OwnerView: React.FC = () => {
                 <Card className="max-w-2xl mx-auto p-8 border-2">
                     <h3 className="text-xl font-black mb-6 flex items-center gap-2">
                         <PlusCircleIcon className="h-6 w-6 text-pink-600" />
-                        Add Booking
+                        {t('owner.schedule.manualBookingTitle')}
                     </h3>
                     <form onSubmit={handleManualBookingSubmit} className="space-y-6">
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Registered Client (Optional)</label>
-                            <select 
+                            <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">{t('owner.schedule.registeredClient')}</label>
+                            <select
                                 onChange={(e) => handleClientSelectForManual(e.target.value)}
                                 className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none text-sm"
                             >
-                                <option value="">-- Select or type below --</option>
+                                <option value="">{t('owner.schedule.selectClient')}</option>
                                 {clients.map(c => (
                                     <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
                                 ))}
@@ -276,32 +277,32 @@ const OwnerView: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Customer Name</label>
-                                <input type="text" required value={manualForm.customerName} onChange={e => setManualForm({...manualForm, customerName: e.target.value})} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.customerName')}</label>
+                                <input type="text" required value={manualForm.customerName} onChange={e => setManualForm({ ...manualForm, customerName: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Customer Email</label>
-                                <input type="email" required value={manualForm.customerEmail} onChange={e => setManualForm({...manualForm, customerEmail: e.target.value})} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.customerEmail')}</label>
+                                <input type="email" required value={manualForm.customerEmail} onChange={e => setManualForm({ ...manualForm, customerEmail: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
                             </div>
                         </div>
                         <div className="grid grid-cols-3 gap-4">
                             <div className="col-span-1">
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
-                                <input type="date" required value={manualForm.date} onChange={e => setManualForm({...manualForm, date: e.target.value})} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.date')}</label>
+                                <input type="date" required value={manualForm.date} onChange={e => setManualForm({ ...manualForm, date: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
                             </div>
                             <div className="col-span-1">
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Time</label>
-                                <input type="text" placeholder="09:00 AM" required value={manualForm.time} onChange={e => setManualForm({...manualForm, time: e.target.value})} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.time')}</label>
+                                <input type="text" placeholder="09:00 AM" required value={manualForm.time} onChange={e => setManualForm({ ...manualForm, time: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
                             </div>
                             <div className="col-span-1">
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Service</label>
-                                <select value={manualForm.serviceId} onChange={e => setManualForm({...manualForm, serviceId: e.target.value})} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none">
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.service')}</label>
+                                <select value={manualForm.serviceId} onChange={e => setManualForm({ ...manualForm, serviceId: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none">
                                     {services.map(s => <option key={s.id} value={s.id}>{s.name} (${s.price})</option>)}
                                 </select>
                             </div>
                         </div>
                         <button type="submit" className="w-full bg-pink-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-pink-700 transition-colors">
-                            Confirm Appointment
+                            {t('owner.schedule.confirmAppointment')}
                         </button>
                     </form>
                 </Card>
@@ -314,8 +315,8 @@ const OwnerView: React.FC = () => {
             {/* Sidebar Inbox */}
             <div className="w-80 border-r border-gray-200 flex flex-col bg-gray-50/50">
                 <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center">
-                    <h2 className="text-lg font-black text-gray-900">Inbox</h2>
-                    <button 
+                    <h2 className="text-lg font-black text-gray-900">{t('owner.inbox.title')}</h2>
+                    <button
                         onClick={() => { setIsComposing(true); setSelectedThreadId(null); }}
                         className="p-2 text-pink-600 hover:bg-pink-50 rounded-full transition-colors"
                         title="New Message"
@@ -328,8 +329,8 @@ const OwnerView: React.FC = () => {
                         const lastMsg = thread.messages[thread.messages.length - 1];
                         const isActive = selectedThreadId === thread.id;
                         return (
-                            <button 
-                                key={thread.id} 
+                            <button
+                                key={thread.id}
                                 onClick={() => handleSelectThread(thread.id)}
                                 className={`w-full text-left p-4 border-b border-gray-100 transition-all ${isActive ? 'bg-white border-l-4 border-l-pink-600 shadow-sm' : 'hover:bg-gray-100'}`}
                             >
@@ -338,7 +339,7 @@ const OwnerView: React.FC = () => {
                                         {thread.client?.name || 'Inquiry'}
                                     </span>
                                     <span className="text-[10px] text-gray-400 font-bold uppercase">
-                                        {new Date(lastMsg.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                        {new Date(lastMsg.timestamp).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
                                     </span>
                                 </div>
                                 <p className={`text-xs truncate ${thread.unreadCount > 0 ? 'font-bold text-black' : 'text-gray-600'}`}>
@@ -354,75 +355,102 @@ const OwnerView: React.FC = () => {
             <div className="flex-1 flex flex-col bg-white">
                 {isComposing ? (
                     <div className="p-8">
-                        <h3 className="text-xl font-black mb-6">Compose New Message</h3>
+                        <h3 className="text-xl font-black mb-6">{t('owner.inbox.compose')}</h3>
                         <form onSubmit={handleComposeSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Recipient</label>
-                                <select 
-                                    required 
-                                    value={composeRecipientId} 
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.inbox.recipient')}</label>
+                                <select
+                                    required
+                                    value={composeRecipientId}
                                     onChange={e => setComposeRecipientId(e.target.value)}
                                     className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none"
                                 >
-                                    <option value="">-- Select Client --</option>
+                                    <option value="">{t('owner.inbox.selectClient')}</option>
                                     {clients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Subject</label>
-                                <input 
-                                    type="text" 
-                                    required 
-                                    value={composeSubject} 
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.inbox.subject')}</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={composeSubject}
                                     onChange={e => setComposeSubject(e.target.value)}
                                     className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none"
-                                    placeholder="e.g., Regarding your appointment tomorrow"
+                                    placeholder={t('owner.inbox.subjectPlaceholder')}
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Message</label>
-                                <textarea 
-                                    required 
-                                    value={composeBody} 
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.inbox.message')}</label>
+                                <textarea
+                                    required
+                                    value={composeBody}
                                     onChange={e => setComposeBody(e.target.value)}
                                     className="w-full p-3 border border-gray-300 rounded-xl min-h-[200px] focus:ring-2 focus:ring-pink-500 outline-none resize-none"
-                                    placeholder="Type your message..."
+                                    placeholder={t('owner.inbox.messagePlaceholder')}
                                 />
                             </div>
-                            <button 
-                                type="submit" 
+                            <button
+                                type="submit"
                                 disabled={isSending}
                                 className="w-full bg-pink-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-pink-700 transition-colors"
                             >
-                                {isSending ? 'Sending...' : 'Send Message'}
+                                {isSending ? t('owner.inbox.sending') : t('owner.inbox.sendMessage')}
                             </button>
                         </form>
                     </div>
                 ) : activeThread ? (
                     <>
-                        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900 mb-1">{activeThread.messages[0].subject}</h2>
+                        <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-white sticky top-0 z-10 shadow-sm">
+                            <div className="flex-1">
+                                <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                                    {activeThread.messages[0].subject}
+                                </h2>
                                 <div className="text-sm text-gray-500">From: <span className="font-bold text-gray-800">{activeThread.client?.name || 'Unknown'}</span> ({activeThread.client?.email || 'No email'})</div>
                             </div>
+                            <button
+                                onClick={async () => {
+                                    if (selectedThreadId && window.confirm("Are you sure you want to delete this entire conversation? This cannot be undone.")) {
+                                        await deleteThread(selectedThreadId);
+                                        setSelectedThreadId(null);
+                                    }
+                                }}
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-4"
+                                title="Delete Conversation"
+                            >
+                                <TrashIcon className="h-5 w-5" />
+                            </button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-gray-50/30" ref={threadScrollRef}>
                             {activeThread.messages.map((msg) => (
                                 <div key={msg.id} className={`flex flex-col ${msg.senderId === 'owner-1' ? 'items-end' : 'items-start'}`}>
-                                    <div className={`max-w-[80%] p-5 rounded-2xl shadow-sm border ${msg.senderId === 'owner-1' ? 'bg-pink-600 text-white border-pink-700' : 'bg-white text-gray-800 border-gray-200'}`}>
+                                    <div className={`relative group max-w-[80%] p-5 rounded-2xl shadow-sm border ${msg.senderId === 'owner-1' ? 'bg-pink-600 text-white border-pink-700' : 'bg-white text-gray-800 border-gray-200'}`}>
                                         <div className="flex justify-between items-center mb-2 text-[10px] font-bold uppercase opacity-60">
                                             <span>{msg.senderId === 'owner-1' ? 'You' : msg.senderName}</span>
                                             <span className="ml-4">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
                                         <div className="text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</div>
+
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm("Delete this message?")) {
+                                                    await deleteMessage(msg.id);
+                                                }
+                                            }}
+                                            className={`absolute -top-2 ${msg.senderId === 'owner-1' ? '-left-2' : '-right-2'} opacity-0 group-hover:opacity-100 p-1.5 bg-red-100 text-red-600 rounded-full shadow-md transition-all scale-90 hover:scale-110`}
+                                            title="Delete Message"
+                                        >
+                                            <TrashIcon className="h-3 w-3" />
+                                        </button>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <div className="p-6 border-t border-gray-200">
+                        <div className="p-6 border-t border-gray-200 bg-white">
                             <form onSubmit={handleSendReply}>
                                 <div className="flex gap-4 items-end">
-                                    <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Write a reply..." className="flex-1 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none text-sm min-h-[80px] max-h-[200px] resize-none" />
+                                    <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder={t('owner.inbox.writeReply')} className="flex-1 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none text-sm min-h-[80px] max-h-[200px] resize-none" />
                                     <button type="submit" disabled={isSending || !replyText.trim()} className="bg-pink-600 text-white p-4 rounded-xl font-bold hover:bg-pink-700 disabled:opacity-50 transition-all flex items-center justify-center h-[56px] w-[56px] shadow-lg">
                                         <PaperAirplaneIcon className="h-6 w-6" />
                                     </button>
@@ -433,7 +461,7 @@ const OwnerView: React.FC = () => {
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
                         <MailIcon className="h-16 w-16 mb-4 opacity-20" />
-                        <p className="font-bold">Select an inquiry or click '+' to compose</p>
+                        <p className="font-bold">{t('owner.inbox.selectInquiry')}</p>
                     </div>
                 )}
             </div>
@@ -444,14 +472,15 @@ const OwnerView: React.FC = () => {
         <div className="space-y-6">
             <div className="grid grid-cols-4 gap-2 bg-gray-200 p-1 rounded-xl shadow-inner">
                 {[
-                    { id: 'schedule', label: 'Schedule', icon: CalendarIcon, badge: 0 },
-                    { id: 'requests', label: 'Requests', icon: ClockIcon, badge: pendingRequestsCount },
-                    { id: 'clients', label: 'Clients', icon: UsersIcon, badge: 0 },
-                    { id: 'messages', label: 'Inbox', icon: MailIcon, badge: unreadMessagesCount }
+                    { id: 'schedule', label: t('owner.tabs.schedule'), icon: CalendarIcon, badge: 0 },
+                    { id: 'requests', label: t('owner.tabs.requests'), icon: ClockIcon, badge: pendingRequestsCount },
+                    { id: 'clients', label: t('owner.tabs.clients'), icon: UsersIcon, badge: 0 },
+                    { id: 'messages', label: t('owner.tabs.inbox'), icon: MailIcon, badge: unreadMessagesCount },
+                    { id: 'ai', label: t('owner.ai.title'), icon: SparklesIcon, badge: 0 }
                 ].map(tab => (
-                    <button 
-                        key={tab.id} 
-                        onClick={() => setCurrentTab(tab.id as any)} 
+                    <button
+                        key={tab.id}
+                        onClick={() => setCurrentTab(tab.id as any)}
                         className={`py-3 text-xs font-bold capitalize rounded-lg transition-all flex items-center justify-center gap-2 relative ${currentTab === tab.id ? 'bg-white text-pink-600 shadow' : 'text-gray-600 hover:text-gray-900'}`}
                     >
                         <div className="relative">
@@ -469,12 +498,13 @@ const OwnerView: React.FC = () => {
 
             {currentTab === 'schedule' && renderScheduleTabs()}
             {currentTab === 'messages' && renderMessages()}
-            
+            {currentTab === 'ai' && <AIAssistant />}
+
             {currentTab === 'requests' && (
                 <div className="space-y-4 max-w-2xl mx-auto">
                     <div className="flex justify-between items-center mb-4">
-                         <h2 className="text-xl font-black text-gray-900">Pending Requests</h2>
-                         <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-xs font-black">{bookingRequests.length} Total</span>
+                        <h2 className="text-xl font-black text-gray-900">{t('owner.requests.pendingTitle')}</h2>
+                        <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-xs font-black">{bookingRequests.length} {t('owner.requests.total')}</span>
                     </div>
                     {bookingRequests.length > 0 ? bookingRequests.map(r => (
                         <Card key={r.id} className="p-6 flex justify-between items-center border-l-4 border-l-yellow-400 shadow-lg">
@@ -486,17 +516,17 @@ const OwnerView: React.FC = () => {
                                     <p className="text-xs text-gray-600 italic bg-gray-50 p-2 rounded-lg mt-2 border border-gray-100">"{r.customerNotes}"</p>
                                 )}
                             </div>
-                            <button 
-                                onClick={() => handleApproveRequest(r.id)} 
+                            <button
+                                onClick={() => handleApproveRequest(r.id)}
                                 className="bg-pink-600 hover:bg-pink-700 text-white px-6 py-2 rounded-xl text-sm font-black shadow-md transition-all active:scale-95"
                             >
-                                Approve & Email
+                                {t('owner.requests.approveEmail')}
                             </button>
                         </Card>
                     )) : (
                         <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 shadow-inner">
                             <ClockIcon className="h-12 w-12 text-gray-200 mx-auto mb-3" />
-                            <p className="text-gray-400 font-bold">No pending requests</p>
+                            <p className="text-gray-400 font-bold">{t('owner.requests.noPending')}</p>
                         </div>
                     )}
                 </div>
@@ -514,18 +544,18 @@ const OwnerView: React.FC = () => {
                                 </div>
                             </div>
                             <div className="pt-4 border-t border-gray-100">
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Private Owner Notes</label>
-                                <textarea 
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">{t('owner.clients.privateNotes')}</label>
+                                <textarea
                                     value={editingClientNotes[c.id] ?? c.ownerNotes ?? ''}
                                     onChange={(e) => setEditingClientNotes({ ...editingClientNotes, [c.id]: e.target.value })}
-                                    placeholder="Add private details about this client..."
+                                    placeholder={t('owner.clients.placeholderNotes')}
                                     className="w-full text-xs p-3 bg-yellow-50 border border-yellow-200 rounded-xl focus:ring-1 focus:ring-yellow-400 outline-none resize-none min-h-[80px]"
                                 />
-                                <button 
+                                <button
                                     onClick={() => handleSaveClientNote(c.id)}
                                     className="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-yellow-700 hover:text-yellow-800 bg-yellow-100 px-3 py-1 rounded-full transition-colors self-end"
                                 >
-                                    <CheckCircleIcon className="h-3 w-3" /> Save Client Notes
+                                    <CheckCircleIcon className="h-3 w-3" /> {t('owner.clients.saveNotes')}
                                 </button>
                             </div>
                         </Card>

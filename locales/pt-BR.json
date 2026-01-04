@@ -1,0 +1,181 @@
+{
+    "auth": {
+        "clientAccess": "Acesso Cliente",
+        "ownerAccess": "Acesso Proprietário",
+        "clientSignIn": "Login Cliente",
+        "createAccount": "Criar Conta",
+        "ownerLogin": "Login Proprietário",
+        "signIn": "Entrar",
+        "signUp": "Cadastrar",
+        "register": "Registrar",
+        "email": "Endereço de E-mail",
+        "password": "Senha",
+        "repeatPassword": "Repetir Senha",
+        "fullName": "Nome Completo",
+        "forgotPassword": "Esqueceu a senha?",
+        "forgotOwnerPassword": "Esqueceu senha de proprietário?",
+        "processing": "Processando...",
+        "dontHaveAccount": "Não tem uma conta?",
+        "alreadyHaveAccount": "Já tem uma conta?",
+        "ownerManualAuth": "Nota: Contas de proprietário devem ser autorizadas manualmente.",
+        "backToLogin": "Voltar ao Login",
+        "resetPassword": "Redefinir Senha",
+        "resetPasswordDesc": "Digite seu e-mail para receber um link de redefinição.",
+        "sendResetLink": "Enviar Link",
+        "sending": "Enviando...",
+        "verifyEmailTitle": "Verifique seu E-mail",
+        "verifyEmailDesc": "Enviamos um e-mail de verificação para",
+        "verifyEmailCheck": "Por favor, verifique sua caixa de entrada e clique no link para verificar sua conta antes de fazer login.",
+        "backToSignIn": "Voltar para Entrar",
+        "errorMismatch": "As senhas não coincidem",
+        "errorLength": "A senha deve ter pelo menos 6 caracteres",
+        "errorInvalidCreds": "Senha ou E-mail Incorretos",
+        "errorGenericSignIn": "Falha ao entrar. Verifique suas credenciais.",
+        "errorExists": "Usuário já existe. Entrar?",
+        "errorGenericSignUp": "Falha ao cadastrar",
+        "placeholderName": "Seu Nome",
+        "placeholderNameOwner": "Laura Assunção",
+        "placeholderEmail": "voce@exemplo.com",
+        "placeholderEmailOwner": "laura@silkyhair.com"
+    },
+    "common": {
+        "welcome": "Alisamento Capilar Silky"
+    },
+    "user": {
+        "tabs": {
+            "book": "Agendar Tratamento",
+            "appointments": "Meus Agendamentos",
+            "inquiries": "Minhas Dúvidas",
+            "profile": "Meu Perfil"
+        },
+        "booking": {
+            "selectService": "Selecione um Serviço",
+            "minutes": "Minutos",
+            "confirmRequest": "Confirme sua Agendamento",
+            "backToTimes": "Voltar para horários",
+            "changeService": "Mudar Serviço",
+            "service": "Serviço",
+            "date": "Data",
+            "time": "Horário",
+            "price": "Preço",
+            "notesLabel": "Adicione observações para a Laura (opcional)",
+            "notesPlaceholder": "ex: Tenho cabelo muito volumoso...",
+            "sendRequest": "Enviar Solicitação",
+            "successMessage": "Solicitação enviada! A Laura revisará seu agendamento para {{serviceName}}.",
+            "failureMessage": "Falha ao enviar solicitação. Tente novamente.",
+            "selectDate": "Selecione a Data",
+            "availableTimes": "Horários Disponíveis",
+            "noSlots": "Sem horários disponíveis para esta data.",
+            "tryAnotherDay": "Tente selecionar outro dia.",
+            "selectDatePrompt": "Por favor selecione uma data no calendário"
+        },
+        "appointments": {
+            "pending": "Aprovação Pendente",
+            "awaitingOwner": "Aguardando Proprietário",
+            "upcoming": "Próximos Agendamentos",
+            "confirmed": "Confirmado",
+            "noUpcoming": "Nenhum agendamento futuro",
+            "history": "Histórico"
+        },
+        "inquiries": {
+            "conversations": "Conversas",
+            "noMessages": "Sem mensagens ainda.",
+            "salonOwner": "Proprietária do Salão",
+            "you": "Você",
+            "laura": "Laura",
+            "writeReply": "Escreva uma resposta...",
+            "newInquiry": "Nova Dúvida",
+            "subject": "Assunto",
+            "subjectPlaceholder": "ex: Dúvida sobre agendamento",
+            "message": "Mensagem",
+            "messagePlaceholder": "Como a Laura pode ajudar?",
+            "sendMessage": "Enviar Mensagem",
+            "sending": "Enviando...",
+            "sentSuccess": "Sua mensagem foi enviada para a Laura."
+        },
+        "profile": {
+            "role": "Função",
+            "verifiedClient": "Cliente Verificado",
+            "status": "Status do Modo Local",
+            "storage": "Armazenamento de Dados do Navegador"
+        }
+    },
+    "owner": {
+        "tabs": {
+            "schedule": "Agenda",
+            "requests": "Solicitações",
+            "clients": "Clientes",
+            "inbox": "Caixa de Entrada"
+        },
+        "schedule": {
+            "appointments": "Compromissos",
+            "availability": "Disponibilidade",
+            "addBooking": "Adicionar Agendamento",
+            "manualBookingTitle": "Adicionar Agendamento",
+            "registeredClient": "Cliente Registrado (Opcional)",
+            "selectClient": "-- Selecione ou digite abaixo --",
+            "customerName": "Nome do Cliente",
+            "customerEmail": "Email do Cliente",
+            "date": "Data",
+            "time": "Horário",
+            "service": "Serviço",
+            "confirmAppointment": "Confirmar Agendamento",
+            "bookingAdded": "Agendamento adicionado!",
+            "noAppointments": "Nenhum agendamento para este dia",
+            "preSetAvailability": "Disponibilidade Pré-definida",
+            "noSpecificHours": "Nenhum horário específico definido"
+        },
+        "requests": {
+            "pendingTitle": "Solicitações Pendentes",
+            "total": "Total",
+            "approveEmail": "Aprovar & Email",
+            "noPending": "Nenhuma solicitação pendente",
+            "emailSubject": "Agendamento Confirmado - Alisamento Capilar Silky",
+            "emailBody": "Olá {{name}},\\n\\nSeu agendamento para {{service}} foi confirmado!\\n\\nDetalhes:\\nData: {{date}}\\nHorário: {{time}}\\n\\nEsperamos vê-lo no salão.\\n\\nAtenciosamente,\\nLaura Assuncao\\nAlisamento Capilar Silky"
+        },
+        "clients": {
+            "privateNotes": "Notas Privadas",
+            "placeholderNotes": "Adicionar detalhes privados sobre este cliente...",
+            "saveNotes": "Salvar Notas",
+            "successNotes": "Notas do cliente atualizadas com sucesso."
+        },
+        "availability": {
+            "clearButton": "Limpar Disponibilidade",
+            "confirmClear": "Tem certeza que deseja limpar a disponibilidade para as datas selecionadas?",
+            "confirmClearWithConflicts": "Aviso: Existem agendamentos existentes nas datas selecionadas. Limpar a disponibilidade NÃO excluirá esses agendamentos. Você deve movê-los manualmente. Prosseguir?",
+            "clearing": "Limpando...",
+            "cleared": "Disponibilidade limpa!"
+        },
+        "ai": {
+            "title": "Assistente IA",
+            "placeholder": "Digite ou fale um comando (ex: 'Limpar disponibilidade para amanhã')",
+            "startListening": "Ouvir",
+            "stopListening": "Parar",
+            "processing": "Analisando...",
+            "execute": "Executar",
+            "cancel": "Cancelar",
+            "success": "Ação concluída com sucesso!",
+            "error": "Erro ao processar comando.",
+            "confirmTitle": "Confirmação Necessária",
+            "listening": "Ouvindo..."
+        },
+        "inbox": {
+            "title": "Caixa de Entrada",
+            "compose": "Compor Nova Mensagem",
+            "recipient": "Destinatário",
+            "selectClient": "-- Selecione o Cliente --",
+            "subject": "Assunto",
+            "subjectPlaceholder": "ex: Sobre seu agendamento amanhã",
+            "message": "Mensagem",
+            "messagePlaceholder": "Digite sua mensagem...",
+            "sendMessage": "Enviar Mensagem",
+            "sending": "Enviando...",
+            "writeReply": "Escreva uma resposta...",
+            "selectInquiry": "Selecione uma dúvida ou clique em '+' para compor"
+        },
+        "actions": {
+            "cancelConfirm": "Tem certeza que deseja CANCELAR o agendamento de {{name}} em {{date}} às {{time}}?",
+            "ownerNotesPrompt": "Notas do Proprietário para este agendamento:"
+        }
+    }
+}

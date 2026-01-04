@@ -2,15 +2,18 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { Message, Service, Booking } from '../types';
 import Card from './ui/Card';
-import { MailIcon, PaperAirplaneIcon, PlusCircleIcon, UserCircleIcon, CalendarIcon, ClockIcon, CutIcon, ChevronLeftIcon, CheckCircleIcon } from './icons/Icons';
+import { MailIcon, PaperAirplaneIcon, PlusCircleIcon, UserCircleIcon, CalendarIcon, ClockIcon, CutIcon, ChevronLeftIcon, CheckCircleIcon, TrashIcon } from './icons/Icons';
+import { useTranslation } from 'react-i18next';
 import MonthlyCalendar from './MonthlyCalendar';
 
 const UserView: React.FC = () => {
     const {
         services, addBookingRequest, currentUser, messages, sendMessage,
         markThreadAsRead, availability, bookings, bookingRequests,
-        getCalculatedAvailableSlots
+        getCalculatedAvailableSlots, deleteMessage, deleteThread
     } = useAppContext();
+
+    const { t, i18n } = useTranslation();
 
     const [viewMode, setViewMode] = useState<'book' | 'my-appointments' | 'messages' | 'profile'>('book');
     const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -47,7 +50,7 @@ const UserView: React.FC = () => {
                 customerNotes: bookingNotes
             });
 
-            alert(`Request sent! Laura will review your appointment for ${selectedService.name}.`);
+            alert(t('user.booking.successMessage', { serviceName: selectedService.name }));
             setSelectedService(null);
             setSelectedDate(null);
             setSelectedTime(null);
@@ -55,7 +58,7 @@ const UserView: React.FC = () => {
             setViewMode('my-appointments');
         } catch (error) {
             console.error("Booking failed:", error);
-            alert("Failed to send booking request. Please try again.");
+            alert(t('user.booking.failureMessage'));
         }
     };
 
@@ -119,7 +122,7 @@ const UserView: React.FC = () => {
             await sendMessage('owner-1', newSubject, newBody);
             setNewSubject('');
             setNewBody('');
-            alert("Your message has been sent to Laura.");
+            alert(t('user.inquiries.sentSuccess'));
         } catch (error) {
             console.error("Failed to send inquiry:", error);
         } finally {
@@ -131,7 +134,7 @@ const UserView: React.FC = () => {
         if (!selectedService) {
             return (
                 <div className="space-y-6">
-                    <h2 className="text-2xl font-black text-center text-gray-900 mb-8">Select a Service</h2>
+                    <h2 className="text-2xl font-black text-center text-gray-900 mb-8">{t('user.booking.selectService')}</h2>
                     <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                         {services.map(s => (
                             <Card key={s.id} className="p-8 cursor-pointer hover:border-pink-500 hover:shadow-lg transition-all border-2" onClick={() => setSelectedService(s)}>
@@ -141,7 +144,7 @@ const UserView: React.FC = () => {
                                 </div>
                                 <p className="text-gray-600 text-sm mb-6 leading-relaxed">{s.description}</p>
                                 <div className="flex items-center text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                    <ClockIcon className="h-4 w-4 mr-2" /> {s.duration} Minutes
+                                    <ClockIcon className="h-4 w-4 mr-2" /> {s.duration} {t('user.booking.minutes')}
                                 </div>
                             </Card>
                         ))}
@@ -154,37 +157,37 @@ const UserView: React.FC = () => {
             return (
                 <Card className="max-w-2xl mx-auto p-8 border-2">
                     <button onClick={() => setSelectedTime(null)} className="flex items-center text-pink-600 font-bold mb-6 hover:gap-1 transition-all">
-                        <ChevronLeftIcon className="h-5 w-5 mr-1" /> Back to times
+                        <ChevronLeftIcon className="h-5 w-5 mr-1" /> {t('user.booking.backToTimes')}
                     </button>
-                    <h3 className="text-2xl font-black mb-6">Confirm Your Request</h3>
+                    <h3 className="text-2xl font-black mb-6">{t('user.booking.confirmRequest')}</h3>
                     <div className="bg-gray-50 p-6 rounded-2xl mb-6 space-y-4 border border-gray-200">
                         <div className="flex justify-between border-b border-gray-200 pb-2">
-                            <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">Service</span>
+                            <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">{t('user.booking.service')}</span>
                             <span className="font-bold text-gray-900">{selectedService.name}</span>
                         </div>
                         <div className="flex justify-between border-b border-gray-200 pb-2">
-                            <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">Date</span>
-                            <span className="font-bold text-gray-900">{selectedDate?.toLocaleDateString()}</span>
+                            <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">{t('user.booking.date')}</span>
+                            <span className="font-bold text-gray-900">{selectedDate?.toLocaleDateString(i18n.language, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                         </div>
                         <div className="flex justify-between border-b border-gray-200 pb-2">
-                            <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">Time</span>
+                            <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">{t('user.booking.time')}</span>
                             <span className="font-bold text-pink-600">{selectedTime}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">Price</span>
+                            <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">{t('user.booking.price')}</span>
                             <span className="font-black text-gray-900 text-lg">${selectedService.price}</span>
                         </div>
                     </div>
                     <form onSubmit={handleBookingSubmit} className="space-y-4">
-                        <label className="block text-sm font-bold text-gray-700">Add any notes for Laura (optional)</label>
+                        <label className="block text-sm font-bold text-gray-700">{t('user.booking.notesLabel')}</label>
                         <textarea
                             value={bookingNotes}
                             onChange={(e) => setBookingNotes(e.target.value)}
-                            placeholder="e.g., I have very thick hair..."
+                            placeholder={t('user.booking.notesPlaceholder')}
                             className="w-full p-4 border border-gray-300 rounded-xl min-h-[100px] focus:ring-2 focus:ring-pink-500 outline-none resize-none"
                         />
                         <button type="submit" className="w-full bg-pink-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-pink-700 transition-colors">
-                            Send Booking Request
+                            {t('user.booking.sendRequest')}
                         </button>
                     </form>
                 </Card>
@@ -194,14 +197,14 @@ const UserView: React.FC = () => {
         return (
             <div className="max-w-4xl mx-auto space-y-8">
                 <button onClick={() => { setSelectedService(null); setSelectedDate(null); }} className="flex items-center text-pink-600 font-bold hover:gap-2 transition-all">
-                    <ChevronLeftIcon className="h-5 w-5 mr-1" /> Change Service
+                    <ChevronLeftIcon className="h-5 w-5 mr-1" /> {t('user.booking.changeService')}
                 </button>
 
                 <div className="grid md:grid-cols-2 gap-8">
                     <div>
                         <h3 className="text-lg font-black mb-4 flex items-center gap-2">
                             <CalendarIcon className="h-5 w-5 text-pink-500" />
-                            Select Date
+                            {t('user.booking.selectDate')}
                         </h3>
                         <MonthlyCalendar
                             currentMonth={currentMonth}
@@ -216,7 +219,7 @@ const UserView: React.FC = () => {
                     <div className="bg-white p-6 rounded-xl border border-gray-300 shadow-sm">
                         <h3 className="text-lg font-black mb-4 flex items-center gap-2">
                             <ClockIcon className="h-5 w-5 text-pink-500" />
-                            Available Times
+                            {t('user.booking.availableTimes')}
                         </h3>
                         {selectedDate ? (
                             availableSlots.length > 0 ? (
@@ -233,13 +236,13 @@ const UserView: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="py-12 text-center text-gray-400 bg-gray-50 rounded-xl">
-                                    <p className="font-bold">No slots available for this date.</p>
-                                    <p className="text-xs">Try selecting another day.</p>
+                                    <p className="font-bold">{t('user.booking.noSlots')}</p>
+                                    <p className="text-xs">{t('user.booking.tryAnotherDay')}</p>
                                 </div>
                             )
                         ) : (
                             <div className="py-12 text-center text-gray-400">
-                                <p className="font-medium italic">Please select a date on the calendar</p>
+                                <p className="font-medium italic">{t('user.booking.selectDatePrompt')}</p>
                             </div>
                         )}
                     </div>
@@ -252,15 +255,15 @@ const UserView: React.FC = () => {
         <div className="max-w-4xl mx-auto space-y-8">
             {myBookings.pending.length > 0 && (
                 <section>
-                    <h3 className="text-lg font-black text-gray-400 uppercase tracking-widest mb-4">Pending Approval</h3>
+                    <h3 className="text-lg font-black text-gray-400 uppercase tracking-widest mb-4">{t('user.appointments.pending')}</h3>
                     <div className="grid gap-4">
                         {myBookings.pending.map(b => (
                             <Card key={b.id} className="p-6 border-l-4 border-l-yellow-400 flex justify-between items-center">
                                 <div>
                                     <h4 className="font-black text-gray-900">{b.service.name}</h4>
-                                    <p className="text-sm text-gray-500">{new Date(b.date).toLocaleDateString()} at {b.time}</p>
+                                    <p className="text-sm text-gray-500">{new Date(b.date).toLocaleDateString(i18n.language)} at {b.time}</p>
                                 </div>
-                                <span className="text-[10px] font-black uppercase px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">Awaiting Owner</span>
+                                <span className="text-[10px] font-black uppercase px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">{t('user.appointments.awaitingOwner')}</span>
                             </Card>
                         ))}
                     </div>
@@ -268,7 +271,7 @@ const UserView: React.FC = () => {
             )}
 
             <section>
-                <h3 className="text-lg font-black text-gray-900 mb-4">Upcoming Appointments</h3>
+                <h3 className="text-lg font-black text-gray-900 mb-4">{t('user.appointments.upcoming')}</h3>
                 <div className="grid gap-4">
                     {myBookings.upcoming.length > 0 ? myBookings.upcoming.map(b => (
                         <Card key={b.id} className="p-6 border-l-4 border-l-green-500 flex justify-between items-center shadow-lg">
@@ -278,17 +281,17 @@ const UserView: React.FC = () => {
                                 </div>
                                 <div>
                                     <h4 className="font-black text-gray-900">{b.service.name}</h4>
-                                    <p className="text-sm text-gray-600">{new Date(b.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                                    <p className="text-sm text-gray-600">{new Date(b.date).toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
                                     <p className="text-pink-600 font-bold text-sm mt-1">{b.time}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 text-green-600 font-black text-xs uppercase">
-                                <CheckCircleIcon className="h-4 w-4" /> Confirmed
+                                <CheckCircleIcon className="h-4 w-4" /> {t('user.appointments.confirmed')}
                             </div>
                         </Card>
                     )) : (
                         <div className="py-12 text-center bg-white rounded-2xl border border-gray-200 text-gray-400">
-                            <p className="font-bold">No upcoming appointments</p>
+                            <p className="font-bold">{t('user.appointments.noUpcoming')}</p>
                         </div>
                     )}
                 </div>
@@ -296,12 +299,12 @@ const UserView: React.FC = () => {
 
             {myBookings.past.length > 0 && (
                 <section>
-                    <h3 className="text-lg font-black text-gray-400 uppercase tracking-widest mb-4">History</h3>
+                    <h3 className="text-lg font-black text-gray-400 uppercase tracking-widest mb-4">{t('user.appointments.history')}</h3>
                     <div className="grid gap-3 opacity-60">
                         {myBookings.past.map(b => (
                             <div key={b.id} className="bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center text-sm">
                                 <span className="font-bold text-gray-700">{b.service.name}</span>
-                                <span className="text-gray-500">{new Date(b.date).toLocaleDateString()}</span>
+                                <span className="text-gray-500">{new Date(b.date).toLocaleDateString(i18n.language)}</span>
                             </div>
                         ))}
                     </div>
@@ -319,10 +322,10 @@ const UserView: React.FC = () => {
         <div className="max-w-6xl mx-auto py-8">
             <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-12 bg-white p-1.5 rounded-full border border-gray-200 shadow-sm w-fit mx-auto">
                 {[
-                    { id: 'book', label: 'Book Treatment' },
-                    { id: 'my-appointments', label: 'My Appointments' },
-                    { id: 'messages', label: 'My Inquiries' },
-                    { id: 'profile', label: 'My Profile' }
+                    { id: 'book', label: t('user.tabs.book') },
+                    { id: 'my-appointments', label: t('user.tabs.appointments') },
+                    { id: 'messages', label: t('user.tabs.inquiries') },
+                    { id: 'profile', label: t('user.tabs.profile') }
                 ].map(tab => (
                     <button key={tab.id} onClick={() => setViewMode(tab.id as any)} className={`px-4 sm:px-8 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${viewMode === tab.id ? 'bg-pink-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-800'}`}>
                         {tab.label}
@@ -336,7 +339,7 @@ const UserView: React.FC = () => {
                 <div className="grid lg:grid-cols-3 gap-6 h-[650px]">
                     <Card className="lg:col-span-1 flex flex-col bg-gray-50/50">
                         <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
-                            <h2 className="font-black text-gray-900">Conversations</h2>
+                            <h2 className="font-black text-gray-900">{t('user.inquiries.conversations')}</h2>
                             <button onClick={() => setSelectedThreadId(null)} className="text-pink-600 hover:bg-pink-50 p-1 rounded-full"><PlusCircleIcon className="h-6 w-6" /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto">
@@ -347,7 +350,7 @@ const UserView: React.FC = () => {
                                     className={`w-full text-left p-4 border-b border-gray-100 transition-all ${selectedThreadId === thread.id ? 'bg-white border-l-4 border-l-pink-600 shadow-sm' : 'hover:bg-white'}`}
                                 >
                                     <div className="flex justify-between items-center mb-1">
-                                        <span className="text-[10px] font-black text-gray-400 uppercase">Salon Owner</span>
+                                        <span className="text-[10px] font-black text-gray-400 uppercase">{t('user.inquiries.salonOwner')}</span>
                                         {thread.unread && <span className="h-2 w-2 bg-pink-600 rounded-full"></span>}
                                     </div>
                                     <p className={`text-sm truncate ${thread.unread ? 'font-black text-black' : 'text-gray-600'}`}>{thread.subject}</p>
@@ -355,7 +358,7 @@ const UserView: React.FC = () => {
                             ))}
                             {emailThreads.length === 0 && (
                                 <div className="p-8 text-center text-gray-400">
-                                    <p className="text-xs italic font-medium">No messages yet.</p>
+                                    <p className="text-xs italic font-medium">{t('user.inquiries.noMessages')}</p>
                                 </div>
                             )}
                         </div>
@@ -363,26 +366,53 @@ const UserView: React.FC = () => {
                     <Card className="lg:col-span-2 flex flex-col bg-white overflow-hidden">
                         {selectedThreadId && activeThread ? (
                             <>
-                                <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold">{activeThread.subject}</h2>
-                                    <button onClick={() => setSelectedThreadId(null)} className="lg:hidden text-gray-400"><ChevronLeftIcon className="h-5 w-5" /></button>
+                                <div className="p-5 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10 shadow-sm">
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => setSelectedThreadId(null)} className="lg:hidden text-gray-400 mr-2"><ChevronLeftIcon className="h-5 w-5" /></button>
+                                        <h2 className="text-xl font-bold truncate max-w-[200px] sm:max-w-md">{activeThread.subject}</h2>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (window.confirm("Delete conversation?")) {
+                                                await deleteThread(selectedThreadId);
+                                                setSelectedThreadId(null);
+                                            }
+                                        }}
+                                        className="text-gray-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                                        title="Delete Thread"
+                                    >
+                                        <TrashIcon className="h-5 w-5" />
+                                    </button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/20" ref={userThreadScrollRef}>
                                     {activeThread.messages.map(msg => (
                                         <div key={msg.id} className={`flex flex-col ${msg.senderId === currentUser?.id ? 'items-end' : 'items-start'}`}>
-                                            <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm border ${msg.senderId === currentUser?.id ? 'bg-pink-600 text-white border-pink-700' : 'bg-white text-gray-800 border-gray-200'}`}>
+                                            <div className={`relative group max-w-[85%] p-4 rounded-2xl shadow-sm border ${msg.senderId === currentUser?.id ? 'bg-pink-600 text-white border-pink-700' : 'bg-white text-gray-800 border-gray-200'}`}>
                                                 <div className="flex justify-between text-[9px] font-bold uppercase opacity-60 mb-2">
-                                                    <span>{msg.senderId === currentUser?.id ? 'You' : 'Laura'}</span>
+                                                    <span>{msg.senderId === currentUser?.id ? t('user.inquiries.you') : t('user.inquiries.laura')}</span>
                                                     <span className="ml-4">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                 </div>
                                                 <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        if (window.confirm("Delete message?")) {
+                                                            await deleteMessage(msg.id);
+                                                        }
+                                                    }}
+                                                    className={`absolute -top-2 ${msg.senderId === currentUser?.id ? '-left-2' : '-right-2'} opacity-0 group-hover:opacity-100 p-1.5 bg-red-100 text-red-600 rounded-full shadow-md transition-all scale-90 hover:scale-110`}
+                                                    title="Delete Message"
+                                                >
+                                                    <TrashIcon className="h-3 w-3" />
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                                 <form onSubmit={handleSendReply} className="p-5 border-t border-gray-200 bg-white">
                                     <div className="flex gap-3 items-end">
-                                        <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Write a reply..." className="flex-1 p-3 border border-gray-300 rounded-xl text-sm min-h-[50px] max-h-[150px] resize-none focus:ring-2 focus:ring-pink-500 outline-none" />
+                                        <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder={t('user.inquiries.writeReply')} className="flex-1 p-3 border border-gray-300 rounded-xl text-sm min-h-[50px] max-h-[150px] resize-none focus:ring-2 focus:ring-pink-500 outline-none" />
                                         <button type="submit" disabled={isSending || !replyText.trim()} className="bg-pink-600 text-white p-3 rounded-xl font-bold flex items-center justify-center h-[46px] w-[46px] transition-transform active:scale-95 disabled:opacity-50 shadow-md">
                                             <PaperAirplaneIcon className="h-5 w-5" />
                                         </button>
@@ -391,17 +421,17 @@ const UserView: React.FC = () => {
                             </>
                         ) : (
                             <div className="flex-1 p-8 overflow-y-auto">
-                                <h3 className="text-xl font-black mb-6">New Inquiry</h3>
+                                <h3 className="text-xl font-black mb-6">{t('user.inquiries.newInquiry')}</h3>
                                 <form onSubmit={handleSendInquiry} className="space-y-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Subject</label>
-                                        <input type="text" placeholder="e.g., Appointment Question" value={newSubject} onChange={e => setNewSubject(e.target.value)} className="w-full p-4 border border-gray-300 rounded-xl font-bold focus:ring-2 focus:ring-pink-500 outline-none" />
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t('user.inquiries.subject')}</label>
+                                        <input type="text" placeholder={t('user.inquiries.subjectPlaceholder')} value={newSubject} onChange={e => setNewSubject(e.target.value)} className="w-full p-4 border border-gray-300 rounded-xl font-bold focus:ring-2 focus:ring-pink-500 outline-none" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Message</label>
-                                        <textarea placeholder="How can Laura help you?" value={newBody} onChange={e => setNewBody(e.target.value)} className="w-full p-4 border border-gray-300 rounded-xl min-h-[180px] focus:ring-2 focus:ring-pink-500 outline-none" />
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t('user.inquiries.message')}</label>
+                                        <textarea placeholder={t('user.inquiries.messagePlaceholder')} value={newBody} onChange={e => setNewBody(e.target.value)} className="w-full p-4 border border-gray-300 rounded-xl min-h-[180px] focus:ring-2 focus:ring-pink-500 outline-none" />
                                     </div>
-                                    <button type="submit" disabled={isSending} className="w-full bg-pink-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-pink-700 transition-colors">{isSending ? 'Sending...' : 'Send Message'}</button>
+                                    <button type="submit" disabled={isSending} className="w-full bg-pink-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-pink-700 transition-colors">{isSending ? t('user.inquiries.sending') : t('user.inquiries.sendMessage')}</button>
                                 </form>
                             </div>
                         )}
@@ -416,8 +446,8 @@ const UserView: React.FC = () => {
                     <h2 className="text-2xl font-black text-gray-900 mb-2">{currentUser?.name}</h2>
                     <p className="text-gray-500 font-medium mb-8">{currentUser?.email}</p>
                     <div className="text-left space-y-4 pt-6 border-t border-gray-100">
-                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Role</label><p className="font-bold text-gray-800">Verified Client</p></div>
-                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Local Mode Status</label><p className="font-bold text-gray-800">Browser Data Storage</p></div>
+                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('user.profile.role')}</label><p className="font-bold text-gray-800">{t('user.profile.verifiedClient')}</p></div>
+                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('user.profile.status')}</label><p className="font-bold text-gray-800">{t('user.profile.storage')}</p></div>
                     </div>
                 </Card>
             )}
