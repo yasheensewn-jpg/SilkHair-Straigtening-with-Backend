@@ -5,6 +5,7 @@ import Card from './ui/Card';
 import { MailIcon, PaperAirplaneIcon, PlusCircleIcon, UserCircleIcon, CalendarIcon, ClockIcon, CutIcon, ChevronLeftIcon, CheckCircleIcon, TrashIcon } from './icons/Icons';
 import { useTranslation } from 'react-i18next';
 import MonthlyCalendar from './MonthlyCalendar';
+import { getLocalDateString } from '../utils/dateUtils';
 
 const UserView: React.FC = () => {
     const {
@@ -32,7 +33,7 @@ const UserView: React.FC = () => {
 
     const availableSlots = useMemo(() => {
         if (!selectedDate || !selectedService) return [];
-        const dateStr = selectedDate.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(selectedDate);
         return getCalculatedAvailableSlots(dateStr, selectedService);
     }, [selectedDate, selectedService, getCalculatedAvailableSlots]);
 
@@ -43,7 +44,7 @@ const UserView: React.FC = () => {
         try {
             await addBookingRequest({
                 service: selectedService,
-                date: selectedDate.toISOString().split('T')[0],
+                date: getLocalDateString(selectedDate),
                 time: selectedTime,
                 customerName: currentUser.name,
                 customerEmail: currentUser.email,
@@ -285,8 +286,16 @@ const UserView: React.FC = () => {
                                     <p className="text-pink-600 font-bold text-sm mt-1">{b.time}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 text-green-600 font-black text-xs uppercase">
-                                <CheckCircleIcon className="h-4 w-4" /> {t('user.appointments.confirmed')}
+                            <div className="flex flex-col items-end gap-2">
+                                <div className="flex items-center gap-2 text-green-600 font-black text-xs uppercase">
+                                    <CheckCircleIcon className="h-4 w-4" /> {t('user.appointments.confirmed')}
+                                </div>
+                                <button
+                                    onClick={() => alert(t('cancelMessage'))}
+                                    className="text-gray-400 hover:text-red-500 text-xs font-bold underline transition-colors"
+                                >
+                                    Cancel Listing
+                                </button>
                             </div>
                         </Card>
                     )) : (
@@ -337,7 +346,7 @@ const UserView: React.FC = () => {
             {viewMode === 'my-appointments' && renderMyAppointments()}
             {viewMode === 'messages' && (
                 <div className="grid lg:grid-cols-3 gap-6 h-[650px]">
-                    <Card className="lg:col-span-1 flex flex-col bg-gray-50/50">
+                    <Card className={`lg:col-span-1 flex-col bg-gray-50/50 ${selectedThreadId ? 'hidden lg:flex' : 'flex'}`}>
                         <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
                             <h2 className="font-black text-gray-900">{t('user.inquiries.conversations')}</h2>
                             <button onClick={() => setSelectedThreadId(null)} className="text-pink-600 hover:bg-pink-50 p-1 rounded-full"><PlusCircleIcon className="h-6 w-6" /></button>
@@ -363,12 +372,12 @@ const UserView: React.FC = () => {
                             )}
                         </div>
                     </Card>
-                    <Card className="lg:col-span-2 flex flex-col bg-white overflow-hidden">
+                    <Card className={`lg:col-span-2 flex-col bg-white overflow-hidden ${!selectedThreadId ? 'hidden lg:flex' : 'flex'}`}>
                         {selectedThreadId && activeThread ? (
                             <>
                                 <div className="p-5 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10 shadow-sm">
                                     <div className="flex items-center gap-2">
-                                        <button onClick={() => setSelectedThreadId(null)} className="lg:hidden text-gray-400 mr-2"><ChevronLeftIcon className="h-5 w-5" /></button>
+                                        <button onClick={() => setSelectedThreadId(null)} className="lg:hidden text-gray-400 mr-2 hover:bg-gray-100 p-1 rounded-full"><ChevronLeftIcon className="h-6 w-6" /></button>
                                         <h2 className="text-xl font-bold truncate max-w-[200px] sm:max-w-md">{activeThread.subject}</h2>
                                     </div>
                                     <button

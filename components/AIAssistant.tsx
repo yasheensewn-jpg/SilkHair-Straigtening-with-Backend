@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { useAppContext } from '../contexts/AppContext';
-import { MicrophoneIcon, SparklesIcon, PaperAirplaneIcon, CheckCircleIcon, TrashIcon } from './icons/Icons';
+import { MicrophoneIcon, SparklesIcon, CheckCircleIcon, TrashIcon } from './icons/Icons';
 import Card from './ui/Card';
 import { useTranslation } from 'react-i18next';
+import { getLocalDateString } from '../utils/dateUtils';
 
-// Placeholder or Environment Variable
-const API_KEY = ""; // User will need to provide this
+// Embedded API Key for seamless owner experience
+const API_KEY = "AIzaSyAok6yETYZmrXz6UisXlwRoUVc2n-iHs7Q";
 
 const AIAssistant: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const {
         overwriteAvailabilityForDates,
         clearAvailabilityForDates,
@@ -24,7 +25,9 @@ const AIAssistant: React.FC = () => {
     const [processing, setProcessing] = useState(false);
     const [parsedAction, setParsedAction] = useState<any | null>(null);
     const [resultMessage, setResultMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-    const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+
+    // API Key is now managed internally
+    const apiKey = API_KEY;
 
     const recognitionRef = useRef<any>(null);
 
@@ -34,7 +37,8 @@ const AIAssistant: React.FC = () => {
             recognitionRef.current = new SpeechRecognition();
             recognitionRef.current.continuous = false;
             recognitionRef.current.interimResults = false;
-            recognitionRef.current.lang = 'en-US'; // Could be dynamic based on i18n
+            // set language based on current app locale, default to Portuguese (Brazil) if matches, or English
+            recognitionRef.current.lang = i18n.language === 'pt' ? 'pt-BR' : i18n.language;
 
             recognitionRef.current.onresult = (event: any) => {
                 const transcript = event.results[0][0].transcript;
@@ -51,7 +55,7 @@ const AIAssistant: React.FC = () => {
                 setIsListening(false);
             };
         }
-    }, []);
+    }, [i18n.language]);
 
     const toggleListening = () => {
         if (isListening) {
@@ -67,10 +71,6 @@ const AIAssistant: React.FC = () => {
 
     const handleAnalyze = async () => {
         if (!input.trim()) return;
-        if (!apiKey) {
-            setResultMessage({ type: 'error', text: "Please provide a valid Gemini API Key." });
-            return;
-        }
 
         setProcessing(true);
         setResultMessage(null);
@@ -78,41 +78,37 @@ const AIAssistant: React.FC = () => {
 
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
-            // Updated based on user's available models (2026-01-04)
             const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-            // Use local date for better "tomorrow" resolution
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            const currentDate = `${year}-${month}-${day}`;
+            const currentDate = getLocalDateString(new Date());
 
             const prompt = `
                 You are an AI assistant for a hair salon owner.
                 Current Date: ${currentDate}
                 
                 Your task is to parse the user's natural language command into a structured JSON object.
+                The user may speak in English, Portuguese (pt-BR), or Spanish. You must understand all of them.
+
                 Valid actions are: "clear_availability", "set_availability", "cancel_booking", "confirm_request", "send_message".
                 
-                For "clear_availability" (also "remove", "delete", "cancel availability"):
+                For "clear_availability" (also "remove", "delete", "cancel availability", "limpar agenda", "remover disponibilidade"):
                 - Extract dates. Return dates in YYYY-MM-DD format.
                 - JSON: { "action": "clear_availability", "dates": ["2024-01-01"] }
                 
-                For "set_availability" (also "create", "add", "open"):
+                For "set_availability" (also "create", "add", "open", "marcar", "abrir agenda", "definir horario"):
                 - Extract dates (YYYY-MM-DD).
                 - Extract time ranges (start and end times, e.g., "09:00 AM").
                 - JSON: { "action": "set_availability", "dates": ["2024-01-01"], "ranges": [{ "start": "09:00 AM", "end": "05:00 PM" }] }
                 
-                For "cancel_booking":
+                For "cancel_booking" (also "cancelar agendamento"):
                 - Extract customer name or date. 
                 - JSON: { "action": "cancel_booking", "query": "John Doe" }
                 
-                For "confirm_request":
+                For "confirm_request" (also "confirmar", "aprovar"):
                 - Extract customer name or date.
                 - JSON: { "action": "confirm_request", "query": "Jane Smith" }
                 
-                For "send_message":
+                For "send_message" (also "enviar mensagem"):
                 - Extract recipient (query), subject, and body.
                 - JSON: { "action": "send_message", "query": "John", "subject": "Hi", "body": "..." }
 
@@ -127,7 +123,6 @@ const AIAssistant: React.FC = () => {
             const response = await result.response;
             const text = response.text();
 
-            // Cleanup json formatting if AI adds backticks
             const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
             const json = JSON.parse(cleanedText);
             console.log("Parsed AI Action:", json);
@@ -135,21 +130,11 @@ const AIAssistant: React.FC = () => {
             setParsedAction(json);
         } catch (error: any) {
             console.error(error);
-            // Show more detailed error if available
             const errorMsg = error.message || t('owner.ai.error');
             setResultMessage({ type: 'error', text: `${t('owner.ai.error')} (${errorMsg})` });
         } finally {
             setProcessing(false);
         }
-    };
-
-    // Helper to match the key generation logic of MonthlyCalendar/AvailabilityManager
-    // They construct dates via new Date(year, month, day) [Local Midnight] -> .toISOString().split('T')[0] [UTC Date]
-    // This handles timezone offsets properly (e.g. Jan 8 Local -> Jan 7 UTC for +10:30)
-    const getStorageKeyForDate = (dateStr: string): string => {
-        const [y, m, d] = dateStr.split('-').map(Number);
-        const localDate = new Date(y, m - 1, d);
-        return localDate.toISOString().split('T')[0];
     };
 
     const handleExecute = async () => {
@@ -160,15 +145,13 @@ const AIAssistant: React.FC = () => {
             switch (parsedAction.action) {
                 case 'clear_availability':
                     if (parsedAction.dates && Array.isArray(parsedAction.dates)) {
-                        const adjustedDates = parsedAction.dates.map(getStorageKeyForDate);
-                        await clearAvailabilityForDates(adjustedDates);
+                        await clearAvailabilityForDates(parsedAction.dates);
                         setResultMessage({ type: 'success', text: `${t('owner.ai.success')} (Cleared: ${parsedAction.dates.join(', ')})` });
                     }
                     break;
                 case 'set_availability':
                     if (parsedAction.dates && parsedAction.ranges) {
-                        const adjustedDates = parsedAction.dates.map(getStorageKeyForDate);
-                        await overwriteAvailabilityForDates(adjustedDates, parsedAction.ranges);
+                        await overwriteAvailabilityForDates(parsedAction.dates, parsedAction.ranges);
                         setResultMessage({ type: 'success', text: `${t('owner.ai.success')} (Set: ${parsedAction.dates.join(', ')})` });
                     }
                     break;
@@ -203,7 +186,6 @@ const AIAssistant: React.FC = () => {
                     }
                     break;
                 case 'send_message':
-                    // Keep existing simulation for now or implement if needed
                     setResultMessage({ type: 'success', text: "Message simulated (Functionality pending full email integration)." });
                     break;
                 case 'unknown':
@@ -218,17 +200,6 @@ const AIAssistant: React.FC = () => {
             setProcessing(false);
             setParsedAction(null);
         }
-    };
-
-    const handleSaveKey = (key: string) => {
-        setApiKey(key);
-        localStorage.setItem('gemini_api_key', key);
-    };
-
-    const handleResetKey = () => {
-        setApiKey('');
-        localStorage.removeItem('gemini_api_key');
-        setResultMessage(null);
     };
 
     const renderActionSummary = (action: any) => {
@@ -284,26 +255,7 @@ const AIAssistant: React.FC = () => {
                     <SparklesIcon className="h-8 w-8 text-indigo-500" />
                     <h2 className="text-2xl font-black text-gray-900">{t('owner.ai.title')}</h2>
                 </div>
-                {apiKey && (
-                    <button onClick={handleResetKey} className="text-xs text-gray-400 hover:text-red-500 underline">
-                        Change API Key
-                    </button>
-                )}
             </div>
-
-            {!apiKey ? (
-                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                    <label className="block text-sm font-bold text-yellow-800 mb-2">Enter Gemini API Key (Required)</label>
-                    <input
-                        type="password"
-                        value={apiKey}
-                        onChange={(e) => handleSaveKey(e.target.value)}
-                        className="w-full p-2 border border-yellow-300 rounded-lg"
-                        placeholder="AIza..."
-                    />
-                    <p className="text-xs text-yellow-700 mt-2">This key is stored locally in your browser.</p>
-                </div>
-            ) : null}
 
             <div className="relative mb-4">
                 <textarea
@@ -324,7 +276,7 @@ const AIAssistant: React.FC = () => {
             <div className="flex justify-end mb-6">
                 <button
                     onClick={handleAnalyze}
-                    disabled={processing || !input.trim() || !apiKey}
+                    disabled={processing || !input.trim()}
                     className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                 >
                     {processing ? (

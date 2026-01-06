@@ -7,7 +7,9 @@ import MonthlyCalendar from './MonthlyCalendar';
 import DayPreview from './DayPreview';
 import AvailabilityManager from './AvailabilityManager';
 import AIAssistant from './AIAssistant';
+import CancellationModal from './CancellationModal';
 import { useTranslation } from 'react-i18next';
+import { getLocalDateString } from '../utils/dateUtils';
 
 const OwnerView: React.FC = () => {
     const {
@@ -25,7 +27,8 @@ const OwnerView: React.FC = () => {
         addManualBooking,
         updateClientNotes,
         deleteMessage,
-        deleteThread
+        deleteThread,
+        updateAvailabilitySlots
     } = useAppContext();
     const { t, i18n } = useTranslation();
 
@@ -35,13 +38,15 @@ const OwnerView: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
+    const [cancellationBooking, setCancellationBooking] = useState<Booking | null>(null);
+
     // Manual Booking Form State
     const [manualForm, setManualForm] = useState({
         serviceId: services[0]?.id || '',
         customerName: '',
         customerEmail: '',
         time: '09:00 AM',
-        date: new Date().toISOString().split('T')[0]
+        date: getLocalDateString(new Date())
     });
 
     // Messaging State
@@ -57,7 +62,7 @@ const OwnerView: React.FC = () => {
     // Client Notes State (local for editing)
     const [editingClientNotes, setEditingClientNotes] = useState<Record<string, string>>({});
 
-    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+    const selectedDateStr = getLocalDateString(selectedDate);
 
     // Badge Calculations
     const unreadMessagesCount = useMemo(() =>
@@ -188,13 +193,77 @@ const OwnerView: React.FC = () => {
         window.location.href = `mailto:${req.customerEmail}?subject=${subject}&body=${body}`;
     };
 
-    const handleCancelWithConfirm = async (bookingId: string) => {
-        const booking = bookings.find(b => b.id === bookingId);
-        if (!booking) return;
-        if (window.confirm(t('owner.actions.cancelConfirm', { name: booking.customerName, date: booking.date, time: booking.time }))) {
-            await cancelBooking(bookingId);
+
+    const handleFinalizeCancellation = async (shouldReleaseSlot: boolean) => {
+        if (!cancellationBooking) return;
+        const booking = cancellationBooking;
+
+        // 1. Prepare Email
+        const messageSubject = t('owner.cancellation.emailSubject');
+        const messageBody = t('owner.cancellation.emailBody', {
+            name: booking.customerName,
+            service: booking.service.name,
+            date: booking.date,
+            time: booking.time
+        });
+
+        // 2. Send In-App Message
+        const client = clients.find(c => c.email.toLowerCase() === booking.customerEmail.toLowerCase());
+        if (client) {
+            await sendMessage(client.id, messageSubject, messageBody);
         }
+
+        // 3. Perform Cancellation
+        await cancelBooking(booking.id);
+
+        // 4. Update Availability (Release vs Block)
+        const currentSlots = availability[booking.date] || [];
+
+        let slotTime24 = booking.time;
+        // Check if we need to convert to 24h format (AvailabilityManager standard)
+        // Heuristic: If existing slots use 24h (no 'M'), or if list is empty (default to 24h)
+        const looksLike24h = currentSlots.length === 0 || currentSlots.some(s => !s.includes('M'));
+
+        if (looksLike24h && booking.time.includes('M')) {
+            try {
+                const d = new Date(`2000/01/01 ${booking.time}`);
+                const h = String(d.getHours()).padStart(2, '0');
+                const m = String(d.getMinutes()).padStart(2, '0');
+                slotTime24 = `${h}:${m}`;
+            } catch (e) {
+                console.error("Time conversion error", e);
+            }
+        }
+
+        let newSlots = [...currentSlots];
+
+        if (shouldReleaseSlot) {
+            // Add slot if missing
+            if (!newSlots.includes(slotTime24)) {
+                newSlots.push(slotTime24);
+                // Simple string sort works for "09:00", "14:00"
+                newSlots.sort();
+                await updateAvailabilitySlots(booking.date, newSlots);
+            }
+        } else {
+            // Block (Remove) slot if present
+            if (newSlots.includes(slotTime24)) {
+                newSlots = newSlots.filter(s => s !== slotTime24);
+                await updateAvailabilitySlots(booking.date, newSlots);
+            }
+        }
+
+        // 5. Cleanup UI
+        setCancellationBooking(null);
+
+        // 6. Open Email Client
+        const subject = encodeURIComponent(messageSubject);
+        const body = encodeURIComponent(messageBody);
+        window.location.href = `mailto:${booking.customerEmail}?subject=${subject}&body=${body}`;
     };
+
+
+
 
     const handleUpdateBookingNotes = async (booking: Booking) => {
         const newNotes = window.prompt(t('owner.actions.ownerNotesPrompt'), booking.ownerNotes || "");
@@ -247,7 +316,10 @@ const OwnerView: React.FC = () => {
                             bookings={bookings.filter(b => b.date === selectedDateStr)}
                             availability={availability[selectedDateStr] || []}
                             onEditBooking={handleUpdateBookingNotes}
-                            onCancelBooking={handleCancelWithConfirm}
+                            onCancelBooking={(bookingId) => {
+                                const booking = bookings.find(b => b.id === bookingId);
+                                if (booking) setCancellationBooking(booking);
+                            }}
                         />
                     </div>
                 </div>
@@ -313,7 +385,7 @@ const OwnerView: React.FC = () => {
     const renderMessages = () => (
         <div className="max-w-7xl mx-auto shadow-xl rounded-2xl overflow-hidden flex bg-white border border-gray-200 h-[700px]">
             {/* Sidebar Inbox */}
-            <div className="w-80 border-r border-gray-200 flex flex-col bg-gray-50/50">
+            <div className={`w-full lg:w-80 border-r border-gray-200 flex-col bg-gray-50/50 ${selectedThreadId || isComposing ? 'hidden lg:flex' : 'flex'}`}>
                 <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center">
                     <h2 className="text-lg font-black text-gray-900">{t('owner.inbox.title')}</h2>
                     <button
@@ -329,33 +401,55 @@ const OwnerView: React.FC = () => {
                         const lastMsg = thread.messages[thread.messages.length - 1];
                         const isActive = selectedThreadId === thread.id;
                         return (
-                            <button
-                                key={thread.id}
-                                onClick={() => handleSelectThread(thread.id)}
-                                className={`w-full text-left p-4 border-b border-gray-100 transition-all ${isActive ? 'bg-white border-l-4 border-l-pink-600 shadow-sm' : 'hover:bg-gray-100'}`}
-                            >
-                                <div className="flex justify-between items-baseline mb-1">
-                                    <span className={`text-sm ${thread.unreadCount > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
-                                        {thread.client?.name || 'Inquiry'}
-                                    </span>
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase">
-                                        {new Date(lastMsg.timestamp).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
-                                    </span>
-                                </div>
-                                <p className={`text-xs truncate ${thread.unreadCount > 0 ? 'font-bold text-black' : 'text-gray-600'}`}>
-                                    {lastMsg.subject}
-                                </p>
-                            </button>
+                            <div key={thread.id} className={`w-full flex items-center border-b border-gray-100 transition-all ${isActive ? 'bg-white border-l-4 border-l-pink-600 shadow-sm' : 'hover:bg-gray-100'}`}>
+                                <button
+                                    onClick={() => handleSelectThread(thread.id)}
+                                    className="flex-1 text-left p-4 pr-1"
+                                >
+                                    <div className="flex justify-between items-baseline mb-1">
+                                        <span className={`text-sm ${thread.unreadCount > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+                                            {thread.client?.name || 'Inquiry'}
+                                        </span>
+                                        <span className="text-[10px] text-gray-400 font-bold uppercase">
+                                            {new Date(lastMsg.timestamp).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
+                                        </span>
+                                    </div>
+                                    <p className={`text-xs truncate ${thread.unreadCount > 0 ? 'font-bold text-black' : 'text-gray-600'}`}>
+                                        {lastMsg.subject}
+                                    </p>
+                                </button>
+                                <button
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm("Are you sure you want to delete this entire conversation? This cannot be undone.")) {
+                                            await deleteThread(thread.id);
+                                            if (selectedThreadId === thread.id) setSelectedThreadId(null);
+                                        }
+                                    }}
+                                    className="p-3 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors mr-2 flex-shrink-0"
+                                    title="Delete Conversation"
+                                >
+                                    <TrashIcon className="h-4 w-4" />
+                                </button>
+                            </div>
                         );
                     })}
                 </div>
             </div>
 
             {/* Email Pane */}
-            <div className="flex-1 flex flex-col bg-white">
+            <div className={`flex-1 flex-col bg-white ${!selectedThreadId && !isComposing ? 'hidden lg:flex' : 'flex'}`}>
                 {isComposing ? (
                     <div className="p-8">
-                        <h3 className="text-xl font-black mb-6">{t('owner.inbox.compose')}</h3>
+                        <div className="flex items-center gap-2 mb-6">
+                            <button
+                                onClick={() => setIsComposing(false)}
+                                className="lg:hidden text-gray-400 hover:bg-gray-100 p-1 rounded-full"
+                            >
+                                <ChevronLeftIcon className="h-6 w-6" />
+                            </button>
+                            <h3 className="text-xl font-black">{t('owner.inbox.compose')}</h3>
+                        </div>
                         <form onSubmit={handleComposeSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.inbox.recipient')}</label>
@@ -402,11 +496,19 @@ const OwnerView: React.FC = () => {
                 ) : activeThread ? (
                     <>
                         <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-white sticky top-0 z-10 shadow-sm">
-                            <div className="flex-1">
-                                <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                                    {activeThread.messages[0].subject}
-                                </h2>
-                                <div className="text-sm text-gray-500">From: <span className="font-bold text-gray-800">{activeThread.client?.name || 'Unknown'}</span> ({activeThread.client?.email || 'No email'})</div>
+                            <div className="flex-1 flex items-center gap-2">
+                                <button
+                                    onClick={() => setSelectedThreadId(null)}
+                                    className="lg:hidden text-gray-400 hover:bg-gray-100 p-1 rounded-full mr-2"
+                                >
+                                    <ChevronLeftIcon className="h-6 w-6" />
+                                </button>
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2 truncate max-w-[200px] sm:max-w-md">
+                                        {activeThread.messages[0].subject}
+                                    </h2>
+                                    <div className="text-sm text-gray-500">From: <span className="font-bold text-gray-800">{activeThread.client?.name || 'Unknown'}</span></div>
+                                </div>
                             </div>
                             <button
                                 onClick={async () => {
@@ -562,6 +664,13 @@ const OwnerView: React.FC = () => {
                     ))}
                 </div>
             )}
+
+            <CancellationModal
+                isOpen={!!cancellationBooking}
+                booking={cancellationBooking}
+                onClose={() => setCancellationBooking(null)}
+                onConfirm={handleFinalizeCancellation}
+            />
         </div>
     );
 };

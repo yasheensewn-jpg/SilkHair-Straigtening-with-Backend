@@ -3,25 +3,25 @@ import { useAppContext } from '../contexts/AppContext';
 import Card from './ui/Card';
 import { ChevronLeftIcon, ChevronRightIcon, PlusCircleIcon, TrashIcon, CheckCircleIcon } from './icons/Icons';
 import { useTranslation } from 'react-i18next';
+import { getLocalDateString } from '../utils/dateUtils';
 
-// Helper functions
-const timeToMinutes = (timeStr: string): number => {
-    if (!timeStr) return NaN;
-    const [time, modifier] = timeStr.split(' ');
-    if (!time) return NaN;
-    let [hours, minutes] = time.split(':').map(Number);
-    if (isNaN(hours)) return NaN;
-    if (hours === 12) hours = modifier?.toUpperCase() === 'AM' ? 0 : 12;
-    else if (modifier?.toUpperCase() === 'PM') hours += 12;
-    return hours * 60 + (minutes || 0);
+// Generate 24h time slots in 30-minute increments
+const generateTimeSlots = (): string[] => {
+    const slots = [];
+    for (let i = 0; i < 24; i++) {
+        const hour = i.toString().padStart(2, '0');
+        slots.push(`${hour}:00`);
+        slots.push(`${hour}:30`);
+    }
+    return slots;
 };
 
-const DEFAULT_AVAILABILITY_KEY = 'silky_default_avail_ranges';
+const TIME_SLOTS = generateTimeSlots();
+const DEFAULT_AVAILABILITY_KEY = 'silky_default_avail_ranges_v2';
 
 const AvailabilityManager: React.FC = () => {
     const {
         overwriteAvailabilityForDates,
-        ownerDefinedTimeSlots,
         availability,
         bookings,
         bookingRequests,
@@ -32,13 +32,13 @@ const AvailabilityManager: React.FC = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
 
-    // Load default ranges from storage or fallback
+    // Load default ranges from storage or fallback to 09:00 - 18:00
     const [defaultRanges, setDefaultRanges] = useState<{ start: string, end: string }[]>(() => {
         try {
             const stored = localStorage.getItem(DEFAULT_AVAILABILITY_KEY);
-            return stored ? JSON.parse(stored) : [{ start: '09:00 AM', end: '05:00 PM' }];
+            return stored ? JSON.parse(stored) : [{ start: '09:00', end: '18:00' }];
         } catch {
-            return [{ start: '09:00 AM', end: '05:00 PM' }];
+            return [{ start: '09:00', end: '18:00' }];
         }
     });
 
@@ -69,14 +69,13 @@ const AvailabilityManager: React.FC = () => {
     useEffect(() => {
         if (selectedDays.length > 0 && !selectionStarted.current) {
             selectionStarted.current = true;
-            // When starting a new selection, use the previously saved defaults
             setTimeRanges(defaultRanges);
         } else if (selectedDays.length === 0) {
             selectionStarted.current = false;
         }
     }, [selectedDays, defaultRanges]);
 
-    const handleAddRange = () => setTimeRanges([...timeRanges, { start: '09:00 AM', end: '05:00 PM' }]);
+    const handleAddRange = () => setTimeRanges([...timeRanges, { start: '09:00', end: '18:00' }]);
     const handleRemoveRange = (index: number) => setTimeRanges(timeRanges.filter((_, i) => i !== index));
     const handleRangeChange = (index: number, field: 'start' | 'end', value: string) => {
         const newRanges = [...timeRanges];
@@ -110,10 +109,8 @@ const AvailabilityManager: React.FC = () => {
         }
 
         setIsSaving(true);
-        // If timeRanges is empty, overwriteAvailabilityForDates will effectively clear slots for these dates
         await overwriteAvailabilityForDates(selectedDays, timeRanges);
 
-        // Save current configuration as new default (only if not empty, otherwise keep previous defaults for next time)
         if (timeRanges.length > 0) {
             setDefaultRanges(timeRanges);
             localStorage.setItem(DEFAULT_AVAILABILITY_KEY, JSON.stringify(timeRanges));
@@ -122,12 +119,11 @@ const AvailabilityManager: React.FC = () => {
         setIsSaving(false);
         setShowConfirmation(true);
 
-        // Reset state to "reload" the view as requested
         setTimeout(() => {
             setShowConfirmation(false);
-            setSelectedDays([]); // Remove selection highlights
+            setSelectedDays([]);
         }, 1200);
-    }; // This closing brace was missing in the original context provided by the user.
+    };
 
     const handleClearAvailability = async () => {
         if (selectedDays.length === 0) return;
@@ -142,10 +138,6 @@ const AvailabilityManager: React.FC = () => {
             await clearAvailabilityForDates(selectedDays);
             setIsSaving(false);
             alert(t('owner.availability.cleared'));
-
-            // Reload defaults to reflect "empty" if we want, or just keep current form state.
-            // But usually clearing means we want to reflect that.
-            // Let's just deselect to refresh view.
             setSelectedDays([]);
         }
     };
@@ -164,7 +156,12 @@ const AvailabilityManager: React.FC = () => {
                 <div className="grid grid-cols-7 gap-1">
                     {calendarData.dates.map((date, index) => {
                         if (!date) return <div key={`empty-${index}`}></div>;
-                        const dateStr = date.toISOString().split('T')[0];
+                        // Construct key mathematically to avoid timezone shifts
+                        const d = date.getDate();
+                        const m = date.getMonth() + 1;
+                        const y = date.getFullYear();
+                        const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
                         const isSelected = selectedDays.includes(dateStr);
                         const hasAvail = (availability[dateStr] || []).length > 0;
                         const hasBookings = bookings.some(b => b.date === dateStr) || bookingRequests.some(r => r.date === dateStr);
@@ -204,30 +201,34 @@ const AvailabilityManager: React.FC = () => {
                             <h3 className="text-lg font-bold text-black">Available Hours</h3>
                         </div>
 
-                        <datalist id="time-slots">
-                            {ownerDefinedTimeSlots.map(t => <option key={t} value={t} />)}
-                        </datalist>
-
                         <div className="space-y-3 max-h-48 overflow-y-auto pr-2 mb-4">
                             {timeRanges.map((range, index) => (
                                 <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-300 rounded-lg">
                                     <div className="grid grid-cols-2 gap-2 flex-1">
-                                        <input
-                                            type="text"
-                                            list="time-slots"
-                                            value={range.start}
-                                            onChange={e => handleRangeChange(index, 'start', e.target.value)}
-                                            className="w-full p-2 border border-gray-400 rounded-md text-sm bg-white text-black font-medium"
-                                            placeholder="e.g., 9:00 AM"
-                                        />
-                                        <input
-                                            type="text"
-                                            list="time-slots"
-                                            value={range.end}
-                                            onChange={e => handleRangeChange(index, 'end', e.target.value)}
-                                            className="w-full p-2 border border-gray-400 rounded-md text-sm bg-white text-black font-medium"
-                                            placeholder="e.g., 5:00 PM"
-                                        />
+                                        <div className="relative">
+                                            <select
+                                                value={range.start}
+                                                onChange={e => handleRangeChange(index, 'start', e.target.value)}
+                                                className="w-full p-2 border border-gray-400 rounded-md text-sm bg-white text-black font-medium appearance-none cursor-pointer"
+                                            >
+                                                {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+                                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                                            </div>
+                                        </div>
+                                        <div className="relative">
+                                            <select
+                                                value={range.end}
+                                                onChange={e => handleRangeChange(index, 'end', e.target.value)}
+                                                className="w-full p-2 border border-gray-400 rounded-md text-sm bg-white text-black font-medium appearance-none cursor-pointer"
+                                            >
+                                                {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-500">
+                                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                                            </div>
+                                        </div>
                                     </div>
                                     <button onClick={() => handleRemoveRange(index)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors" title="Remove row">
                                         <TrashIcon className="h-5 w-5" />

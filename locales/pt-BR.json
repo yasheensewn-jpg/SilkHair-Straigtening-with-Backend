@@ -36,7 +36,7 @@
         "placeholderName": "Seu Nome",
         "placeholderNameOwner": "Laura Assunção",
         "placeholderEmail": "voce@exemplo.com",
-        "placeholderEmailOwner": "laura@silkyhair.com"
+        "placeholderEmailOwner": "owner@example.com"
     },
     "common": {
         "welcome": "Alisamento Capilar Silky"
@@ -100,7 +100,12 @@
             "storage": "Armazenamento de Dados do Navegador"
         }
     },
+    "cancelMessage": "Entre em contato diretamente com o proprietário para cancelar ou reagendar seu agendamento.",
     "owner": {
+        "cancellation": {
+            "emailSubject": "Cancelamento de Agendamento - Alisamento Capilar Silky",
+            "emailBody": "Olá {{name}},\n\nEstou escrevendo para informar que seu agendamento para {{service}} no dia {{date}} às {{time}} foi cancelado/alterado.\n\nPor favor, entre em contato se tiver dúvidas.\n\nAtenciosamente,\nAlisamento Capilar Silky"
+        },
         "tabs": {
             "schedule": "Agenda",
             "requests": "Solicitações",
@@ -175,6 +180,14 @@
         },
         "actions": {
             "cancelConfirm": "Tem certeza que deseja CANCELAR o agendamento de {{name}} em {{date}} às {{time}}?",
+            "releaseSlotConfirm": "Você gostaria de tornar este horário disponível para outros clientes?\n\nOK = Sim, liberar horário.\nCancelar = Não, manter bloqueado.",
+            "modal": {
+                "cancelTitle": "Cancelar Agendamento",
+                "releaseLabel": "Liberar horário?",
+                "releaseDescription": "Tornar este horário disponível para novos agendamentos imediatamente.",
+                "confirmBtn": "Confirmar Cancelamento",
+                "backBtn": "Voltar"
+            },
             "ownerNotesPrompt": "Notas do Proprietário para este agendamento:"
         }
     }

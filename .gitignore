@@ -90,3 +90,4 @@ Thumbs.db
 # Dist
 dist
 dist-ssr
+.firebase

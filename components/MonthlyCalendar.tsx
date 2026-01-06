@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from './icons/Icons';
 import { useTranslation } from 'react-i18next';
+import { getLocalDateString } from '../utils/dateUtils';
 
 interface MonthlyCalendarProps {
     currentMonth: Date;
@@ -73,11 +74,17 @@ const MonthlyCalendar: React.FC<MonthlyCalendarProps> = ({ currentMonth, setCurr
                 {calendarData.dates.map((date, index) => {
                     if (!date) return <div key={`empty-${index}`}></div>;
 
-                    const dateStr = date.toISOString().split('T')[0];
-                    const isSelected = selectedDate.toISOString().split('T')[0] === dateStr;
+                    // Construct key mathematically to avoid timezone shifts
+                    const d = date.getDate();
+                    const m = date.getMonth() + 1;
+                    const y = date.getFullYear();
+                    const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+
+                    const isSelected = getLocalDateString(selectedDate) === dateStr;
                     const bookingCount = bookingsByDate[dateStr] || 0;
                     const hasAvail = (availability[dateStr] || []).length > 0;
-                    const isToday = new Date().toISOString().split('T')[0] === dateStr;
+                    const isToday = getLocalDateString(new Date()) === dateStr;
 
                     // Style Logic: Prioritize Selection > Bookings > Availability > Default
                     let btnClass = 'h-14 w-full rounded-xl transition-all duration-200 text-sm flex flex-col items-center justify-center relative p-1 font-bold border-2 ';

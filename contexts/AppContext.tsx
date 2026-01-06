@@ -72,6 +72,7 @@ interface AppContextType {
     getCalculatedAvailableSlots: (date: string, service: Service) => string[];
     ownerDefinedTimeSlots: string[];
     overwriteAvailabilityForDates: (dates: string[], timeRanges: { start: string; end: string }[]) => Promise<void>;
+    updateAvailabilitySlots: (date: string, slots: string[]) => Promise<void>;
     clearAvailabilityForDates: (dates: string[]) => Promise<void>;
     sendMessage: (recipientId: string, subject: string, body: string, threadId?: string) => Promise<void>;
     markMessageAsRead: (messageId: string) => Promise<void>;
@@ -372,6 +373,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     };
 
+    const updateAvailabilitySlots = async (date: string, slots: string[]) => {
+        await setDoc(doc(db, 'availability', date), { slots });
+    };
+
     const sendMessage = async (recipientId: string, subject: string, body: string, threadId?: string) => {
         if (!currentUser) return;
         const resolvedThreadId = threadId || [currentUser.id, recipientId].sort().join('_');
@@ -421,13 +426,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const getCalculatedAvailableSlots = useCallback((date: string, service: Service): string[] => {
         const ownerSlotsForDate = availability[date] || [];
         if (ownerSlotsForDate.length === 0) return [];
+
+        // 1. Parse all available start times (minutes)
         const availabilityInMinutes = ownerSlotsForDate.map(timeToMinutes).sort((a, b) => a - b);
-        const dayStartMinutes = availabilityInMinutes[0];
-        const dayEndMinutes = availabilityInMinutes[availabilityInMinutes.length - 1] + 60;
-        const allBookingsOnDate = [...bookings, ...bookingRequests].filter(b => b.date === date).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
-        const DURATION = service.duration, OVERLAP_INTERVAL = 150;
-        let nextSlotStartMinutes = (allBookingsOnDate.length === 0) ? dayStartMinutes : timeToMinutes(allBookingsOnDate[allBookingsOnDate.length - 1].time) + OVERLAP_INTERVAL;
-        return (nextSlotStartMinutes + DURATION <= dayEndMinutes) ? [minutesToTime(nextSlotStartMinutes)] : [];
+
+        // 2. Determine Session boundaries
+        const dayStartTime = availabilityInMinutes[0];
+        // Implicitly 1 hour after the last available slot start time
+        const dayEndTime = availabilityInMinutes[availabilityInMinutes.length - 1] + 60;
+
+        const SERVICE_DURATION = service.duration; // 240 mins (4 hours)
+        const STAGGER_INTERVAL = 150; // 2.5 hours
+
+        // 3. Find existing bookings
+        const allBookingsOnDate = [...bookings, ...bookingRequests]
+            .filter(b => b.date === date)
+            .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+
+        let proposedSlotMinutes: number;
+
+        if (allBookingsOnDate.length === 0) {
+            // CASE 1: No bookings yet. Show FIRST available slot.
+            proposedSlotMinutes = dayStartTime;
+        } else {
+            // CASE 2: Stacked bookings. Show ONE slot: 2.5h after previous booking started.
+            const lastBookingStart = timeToMinutes(allBookingsOnDate[allBookingsOnDate.length - 1].time);
+            proposedSlotMinutes = lastBookingStart + STAGGER_INTERVAL;
+        }
+
+        // 4. Validate Constraints
+        // Constraint: Must finish before the day session ends
+        if (proposedSlotMinutes + SERVICE_DURATION > dayEndTime) {
+            return []; // No valid slot remaining
+        }
+
+        return [minutesToTime(proposedSlotMinutes)];
     }, [availability, bookings, bookingRequests]);
 
     const ownerDefinedTimeSlots = generateTimeSlots();
@@ -485,7 +518,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             updateUserProfile, deleteUserAccount, verifyUserEmail,
             services, bookings, bookingRequests, availability, clients, messages,
             addBookingRequest, confirmBookingRequest, declineBookingRequest, cancelBooking, updateBooking, addManualBooking,
-            getCalculatedAvailableSlots, ownerDefinedTimeSlots, overwriteAvailabilityForDates, clearAvailabilityForDates,
+            getCalculatedAvailableSlots, ownerDefinedTimeSlots, overwriteAvailabilityForDates, clearAvailabilityForDates, updateAvailabilitySlots,
             sendMessage, markMessageAsRead, markThreadAsRead, deleteClient, updateClientNotes,
             deleteMessage, deleteThread
         }}>

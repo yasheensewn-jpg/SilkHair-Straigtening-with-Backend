@@ -36,7 +36,7 @@
         "placeholderName": "Your Name",
         "placeholderNameOwner": "Laura Assuncao",
         "placeholderEmail": "you@example.com",
-        "placeholderEmailOwner": "laura@silkyhair.com"
+        "placeholderEmailOwner": "owner@example.com"
     },
     "common": {
         "welcome": "Silky Hair Straightening"
@@ -100,7 +100,12 @@
             "storage": "Browser Data Storage"
         }
     },
+    "cancelMessage": "Please contact the owner directly to cancel or reschedule your appointment.",
     "owner": {
+        "cancellation": {
+            "emailSubject": "Appointment Cancellation - Silky Hair Straightening",
+            "emailBody": "Dear {{name}},\n\nI am writing to inform you that your appointment for {{service}} on {{date}} at {{time}} has been cancelled/changed.\n\nPlease contact me if you have any questions.\n\nBest regards,\nSilky Hair Straightening"
+        },
         "tabs": {
             "schedule": "Schedule",
             "requests": "Requests",
@@ -175,7 +180,15 @@
         },
         "actions": {
             "cancelConfirm": "Are you sure you want to CANCEL the appointment for {{name}} on {{date}} at {{time}}?",
-            "ownerNotesPrompt": "Owner Notes for this appointment:"
+            "ownerNotesPrompt": "Owner Notes for this appointment:",
+            "releaseSlotConfirm": "Do you want to make this time slot available for other clients? Click OK to Release, Cancel to keep it Blocked.",
+            "modal": {
+                "cancelTitle": "Cancel Appointment",
+                "releaseLabel": "Release time slot?",
+                "releaseDescription": "Make this slot available for new bookings immediately.",
+                "confirmBtn": "Confirm Cancellation",
+                "backBtn": "Back"
+            }
         }
     }
 }
