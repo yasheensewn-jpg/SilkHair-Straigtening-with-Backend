@@ -6,6 +6,7 @@ import { MailIcon, PaperAirplaneIcon, PlusCircleIcon, UserCircleIcon, CalendarIc
 import { useTranslation } from 'react-i18next';
 import MonthlyCalendar from './MonthlyCalendar';
 import { getLocalDateString } from '../utils/dateUtils';
+import { calculateEndTime } from '../utils/timeUtils';
 
 const UserView: React.FC = () => {
     const {
@@ -30,6 +31,12 @@ const UserView: React.FC = () => {
     const [newSubject, setNewSubject] = useState('');
     const [newBody, setNewBody] = useState('');
     const userThreadScrollRef = useRef<HTMLDivElement>(null);
+
+    // Profile Editing State
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState('');
+    const [editPhone, setEditPhone] = useState('');
+    const { updateUserProfile } = useAppContext();
 
     const availableSlots = useMemo(() => {
         if (!selectedDate || !selectedService) return [];
@@ -262,7 +269,7 @@ const UserView: React.FC = () => {
                             <Card key={b.id} className="p-6 border-l-4 border-l-yellow-400 flex justify-between items-center">
                                 <div>
                                     <h4 className="font-black text-gray-900">{b.service.name}</h4>
-                                    <p className="text-sm text-gray-500">{new Date(b.date).toLocaleDateString(i18n.language)} at {b.time}</p>
+                                    <p className="text-sm text-gray-500">{new Date(b.date).toLocaleDateString(i18n.language)} at {b.time} - {calculateEndTime(b.time, b.service.duration)}</p>
                                 </div>
                                 <span className="text-[10px] font-black uppercase px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">{t('user.appointments.awaitingOwner')}</span>
                             </Card>
@@ -283,7 +290,7 @@ const UserView: React.FC = () => {
                                 <div>
                                     <h4 className="font-black text-gray-900">{b.service.name}</h4>
                                     <p className="text-sm text-gray-600">{new Date(b.date).toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-                                    <p className="text-pink-600 font-bold text-sm mt-1">{b.time}</p>
+                                    <p className="text-pink-600 font-bold text-sm mt-1">{b.time} - {calculateEndTime(b.time, b.service.duration)} ({b.service.duration} min)</p>
                                 </div>
                             </div>
                             <div className="flex flex-col items-end gap-2">
@@ -333,11 +340,16 @@ const UserView: React.FC = () => {
                 {[
                     { id: 'book', label: t('user.tabs.book') },
                     { id: 'my-appointments', label: t('user.tabs.appointments') },
-                    { id: 'messages', label: t('user.tabs.inquiries') },
+                    { id: 'messages', label: t('user.tabs.inquiries'), count: emailThreads.filter(t => t.unread).length },
                     { id: 'profile', label: t('user.tabs.profile') }
                 ].map(tab => (
-                    <button key={tab.id} onClick={() => setViewMode(tab.id as any)} className={`px-4 sm:px-8 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${viewMode === tab.id ? 'bg-pink-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-800'}`}>
+                    <button key={tab.id} onClick={() => setViewMode(tab.id as any)} className={`relative px-4 sm:px-8 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all ${viewMode === tab.id ? 'bg-pink-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-800'}`}>
                         {tab.label}
+                        {tab.count !== undefined && tab.count > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white shadow-sm ring-2 ring-white">
+                                {tab.count}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -452,12 +464,74 @@ const UserView: React.FC = () => {
                     <div className="h-24 w-24 bg-pink-50 rounded-full flex items-center justify-center text-pink-500 mx-auto mb-6">
                         <UserCircleIcon className="h-16 w-16" />
                     </div>
-                    <h2 className="text-2xl font-black text-gray-900 mb-2">{currentUser?.name}</h2>
-                    <p className="text-gray-500 font-medium mb-8">{currentUser?.email}</p>
-                    <div className="text-left space-y-4 pt-6 border-t border-gray-100">
-                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('user.profile.role')}</label><p className="font-bold text-gray-800">{t('user.profile.verifiedClient')}</p></div>
-                        <div><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('user.profile.status')}</label><p className="font-bold text-gray-800">{t('user.profile.storage')}</p></div>
-                    </div>
+
+                    {!isEditing ? (
+                        <>
+                            <h2 className="text-2xl font-black text-gray-900 mb-2">{currentUser?.name}</h2>
+                            <p className="text-gray-500 font-medium mb-2">{currentUser?.email}</p>
+                            {currentUser?.phoneNumber && <p className="text-gray-500 text-sm mb-6">{currentUser.phoneNumber}</p>}
+
+                            <button
+                                onClick={() => {
+                                    setEditName(currentUser?.name || '');
+                                    setEditPhone(currentUser?.phoneNumber || '');
+                                    setIsEditing(true);
+                                }}
+                                className="mt-6 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-full transition-colors text-sm"
+                            >
+                                {t('user.profile.editProfile')}
+                            </button>
+                        </>
+                    ) : (
+                        <div className="text-left space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t('user.profile.name')}</label>
+                                <input
+                                    type="text"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-xl font-bold focus:ring-2 focus:ring-pink-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t('user.profile.mobile')}</label>
+                                <input
+                                    type="tel"
+                                    value={editPhone}
+                                    onChange={(e) => setEditPhone(e.target.value)}
+                                    placeholder={t('auth.placeholderPhone')}
+                                    className="w-full p-3 border border-gray-300 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('user.profile.email')}</label>
+                                <input
+                                    type="email"
+                                    value={currentUser?.email}
+                                    disabled
+                                    className="w-full p-3 border border-gray-100 bg-gray-50 rounded-xl text-gray-400 cursor-not-allowed"
+                                />
+                            </div>
+
+                            <div className="flex gap-2 pt-4">
+                                <button
+                                    onClick={() => setIsEditing(false)}
+                                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-colors"
+                                >
+                                    {t('user.profile.cancel')}
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        await updateUserProfile(editName, currentUser?.photo || '', editPhone);
+                                        setIsEditing(false);
+                                    }}
+                                    className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md"
+                                >
+                                    {t('user.profile.save')}
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             )}
         </div>

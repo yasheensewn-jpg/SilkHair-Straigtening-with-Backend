@@ -5,13 +5,13 @@ import { getFirestore } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDLcmSXzWtpYOZW-nZ9z6F1-d_RZOT7358",
-  authDomain: "silkhair-straightening-backend.firebaseapp.com",
-  projectId: "silkhair-straightening-backend",
-  storageBucket: "silkhair-straightening-backend.firebasestorage.app",
-  messagingSenderId: "377543936144",
-  appId: "1:377543936144:web:beaef0b54051e5a9c5f015",
-  measurementId: "G-1SY2LS430C"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase

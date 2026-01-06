@@ -36,7 +36,9 @@
         "placeholderName": "Your Name",
         "placeholderNameOwner": "Laura Assuncao",
         "placeholderEmail": "you@example.com",
-        "placeholderEmailOwner": "owner@example.com"
+        "placeholderEmailOwner": "owner@example.com",
+        "phoneNumber": "Mobile Number (Optional)",
+        "placeholderPhone": "e.g., +1 555-0123"
     },
     "common": {
         "welcome": "Silky Hair Straightening"
@@ -97,7 +99,13 @@
             "role": "Role",
             "verifiedClient": "Verified Client",
             "status": "Local Mode Status",
-            "storage": "Browser Data Storage"
+            "storage": "Browser Data Storage",
+            "editProfile": "Edit Profile",
+            "save": "Save Changes",
+            "cancel": "Cancel",
+            "name": "Name",
+            "email": "Email (Cannot act)",
+            "mobile": "Mobile Number"
         }
     },
     "cancelMessage": "Please contact the owner directly to cancel or reschedule your appointment.",
@@ -128,15 +136,29 @@
             "bookingAdded": "Booking added!",
             "noAppointments": "No appointments for this day",
             "preSetAvailability": "Pre-set Availability",
-            "noSpecificHours": "No specific hours defined"
+            "noSpecificHours": "No specific hours defined",
+            "otherService": "Other (Custom)",
+            "description": "Description (Optional)",
+            "startTime": "Start Time",
+            "endTime": "End Time",
+            "sendEmail": "Send Email Notification",
+            "emailSubject": "Appointment Confirmation",
+            "emailBody": "Hi {name},\n\nYour appointment for {service} on {date} at {time} has been confirmed.\n\nSee you soon!",
+            "selectSlot": "Select a Slot",
+            "bookWithinAvailability": "Book within Availability? (Blocks Slots)"
         },
         "requests": {
             "pendingTitle": "Pending Requests",
             "total": "Total",
             "approveEmail": "Approve & Email",
-            "noPending": "No pending requests",
-            "emailSubject": "Appointment Confirmed - Silky Hair Straightening",
-            "emailBody": "Hi {{name}},\\n\\nYour appointment for {{service}} has been confirmed!\\n\\nDetails:\\nDate: {{date}}\\nTime: {{time}}\\n\\nWe look forward to seeing you at the salon.\\n\\nBest regards,\\nLaura Assuncao\\nSilky Hair Straightening"
+            "decline": "Decline",
+            "declineEmail": "Decline & Email",
+            "emailToggle": "Send Email Notification automatically",
+            "noPending": "No pending booking requests",
+            "emailSubject": "Appointment Update",
+            "emailBody": "Hello {name},\n\nYour appointment for {service} on {date} at {time} has been confirmed!\n\nWe look forward to seeing you.",
+            "rejectionSubject": "Update regarding your appointment request",
+            "rejectionBody": "Hello {name},\n\nUnfortunately, the owner is unable to provide you with the requested appointment for {service} on {date} at {time}. Please feel free to check the calendar for other available slots."
         },
         "clients": {
             "privateNotes": "Private Owner Notes",

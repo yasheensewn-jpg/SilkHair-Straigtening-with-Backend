@@ -36,7 +36,9 @@
         "placeholderName": "Seu Nome",
         "placeholderNameOwner": "Laura Assunção",
         "placeholderEmail": "voce@exemplo.com",
-        "placeholderEmailOwner": "owner@example.com"
+        "placeholderEmailOwner": "owner@example.com",
+        "phoneNumber": "Número de Celular (Opcional)",
+        "placeholderPhone": "ex: +55 11 99999-9999"
     },
     "common": {
         "welcome": "Alisamento Capilar Silky"
@@ -51,7 +53,7 @@
         "booking": {
             "selectService": "Selecione um Serviço",
             "minutes": "Minutos",
-            "confirmRequest": "Confirme sua Agendamento",
+            "confirmRequest": "Confirme seu Agendamento",
             "backToTimes": "Voltar para horários",
             "changeService": "Mudar Serviço",
             "service": "Serviço",
@@ -97,7 +99,13 @@
             "role": "Função",
             "verifiedClient": "Cliente Verificado",
             "status": "Status do Modo Local",
-            "storage": "Armazenamento de Dados do Navegador"
+            "storage": "Armazenamento de Dados do Navegador",
+            "editProfile": "Editar Perfil",
+            "save": "Salvar Alterações",
+            "cancel": "Cancelar",
+            "name": "Nome",
+            "email": "E-mail (Não editável)",
+            "mobile": "Número de Celular"
         }
     },
     "cancelMessage": "Entre em contato diretamente com o proprietário para cancelar ou reagendar seu agendamento.",
@@ -134,9 +142,14 @@
             "pendingTitle": "Solicitações Pendentes",
             "total": "Total",
             "approveEmail": "Aprovar & Email",
+            "decline": "Recusar",
+            "declineEmail": "Recusar & Email",
+            "emailToggle": "Enviar Notificação por Email automaticamente",
             "noPending": "Nenhuma solicitação pendente",
             "emailSubject": "Agendamento Confirmado - Alisamento Capilar Silky",
-            "emailBody": "Olá {{name}},\\n\\nSeu agendamento para {{service}} foi confirmado!\\n\\nDetalhes:\\nData: {{date}}\\nHorário: {{time}}\\n\\nEsperamos vê-lo no salão.\\n\\nAtenciosamente,\\nLaura Assuncao\\nAlisamento Capilar Silky"
+            "emailBody": "Olá {{name}},\\n\\nSeu agendamento para {{service}} foi confirmado!\\n\\nDetalhes:\\nData: {{date}}\\nHorário: {{time}}\\n\\nEsperamos vê-lo no salão.\\n\\nAtenciosamente,\\nLaura Assuncao\\nAlisamento Capilar Silky",
+            "rejectionSubject": "Atualização sobre sua solicitação de agendamento",
+            "rejectionBody": "Olá {{name}},\\n\\nInfelizmente, a proprietária não pode atender sua solicitação de agendamento para {{service}} no dia {{date}} às {{time}}. Por favor, verifique o calendário para outros horários disponíveis."
         },
         "clients": {
             "privateNotes": "Notas Privadas",

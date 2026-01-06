@@ -28,7 +28,9 @@ const OwnerView: React.FC = () => {
         updateClientNotes,
         deleteMessage,
         deleteThread,
-        updateAvailabilitySlots
+        updateAvailabilitySlots,
+        declineBookingRequest,
+        getCalculatedAvailableSlots
     } = useAppContext();
     const { t, i18n } = useTranslation();
 
@@ -46,8 +48,30 @@ const OwnerView: React.FC = () => {
         customerName: '',
         customerEmail: '',
         time: '09:00 AM',
-        date: getLocalDateString(new Date())
+        date: getLocalDateString(new Date()),
+        customDescription: '',
+        customStartTime: '09:00',
+        customEndTime: '10:00',
+        sendEmail: false,
+        useExistingAvailability: true
     });
+
+    // Date Picker state
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const datePickerRef = useRef<HTMLDivElement>(null);
+
+    // Close date picker when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+                setShowDatePicker(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     // Messaging State
     const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -61,6 +85,9 @@ const OwnerView: React.FC = () => {
 
     // Client Notes State (local for editing)
     const [editingClientNotes, setEditingClientNotes] = useState<Record<string, string>>({});
+
+    // Email Toggle State
+    const [sendEmailOnAction, setSendEmailOnAction] = useState(true);
 
     const selectedDateStr = getLocalDateString(selectedDate);
 
@@ -124,21 +151,107 @@ const OwnerView: React.FC = () => {
         }
     };
 
+    // Helper to convert "HH:MM" (24-hour) to minutes from midnight
+    const timeToMinutes = (timeStr: string): number => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+    };
+
+    // Helper to convert minutes from midnight to "HH:MM AM/PM" format
+    const minutesToTime = (totalMinutes: number): string => {
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+        return `${String(displayHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+    };
+
     const handleManualBookingSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const service = services.find(s => s.id === manualForm.serviceId);
-        if (!service) return;
+
+        let serviceToBook: any = services.find(s => s.id === manualForm.serviceId);
+        let timeToBook = manualForm.time;
+        // Logic for "Other"
+        if (manualForm.serviceId === 'other') {
+            // Validate time
+            const startMinutes = timeToMinutes(manualForm.customStartTime);
+            const endMinutes = timeToMinutes(manualForm.customEndTime);
+
+            if (endMinutes <= startMinutes) {
+                alert('End time must be after start time.');
+                return;
+            }
+
+            const duration = endMinutes - startMinutes;
+            serviceToBook = {
+                id: 'custom-' + Date.now(),
+                name: `Other: ${manualForm.customDescription || 'Custom Service'}`,
+                duration: duration,
+                price: 0 // Optional or prompt
+            };
+
+            // Convert 24h customStartTime back to AM/PM for standard storage if needed, or keeping it as is.
+            // The system uses "09:00 AM" format usually. Let's convert if needed.
+            // However, addManualBooking takes 'time'.
+            timeToBook = minutesToTime(startMinutes);
+        }
+        // Logic for Standard Services
+        if (!serviceToBook) return;
+
+        let source: 'manual' | 'online' = 'manual';
+
+        if (manualForm.serviceId === 'other') {
+            source = 'manual';
+        } else {
+            // Standard Service
+            if (manualForm.useExistingAvailability) {
+                source = 'online'; // Block slots
+            } else {
+                source = 'manual'; // Override (Invisible)
+                // Ensure duration is standard (already set by serviceToBook)
+                // Start time is set by TimePicker
+            }
+        }
 
         await addManualBooking({
-            service,
+            service: serviceToBook,
             date: manualForm.date,
-            time: manualForm.time,
+            time: timeToBook,
             customerName: manualForm.customerName,
-            customerEmail: manualForm.customerEmail
+            customerEmail: manualForm.customerEmail,
+            ownerNotes: 'Manual Booking',
+            source: source
         });
 
+        // 1. Send In-App Message (Always try to find registered client)
+        const recipientClient = clients.find(c => c.email.toLowerCase() === manualForm.customerEmail.toLowerCase());
+        if (recipientClient) {
+            const messageSubject = t('owner.schedule.emailSubject');
+            const messageBody = t('owner.schedule.emailBody', {
+                name: manualForm.customerName,
+                service: serviceToBook.name,
+                date: new Date(manualForm.date).toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' }),
+                time: timeToBook
+            });
+            // Send in-app message
+            await sendMessage(recipientClient.id, messageSubject, messageBody);
+        }
+
+        // 2. Open External Email (If toggled)
+        if (manualForm.sendEmail) {
+            const subject = encodeURIComponent(t('owner.schedule.emailSubject'));
+            const bodyContent = t('owner.schedule.emailBody', {
+                name: manualForm.customerName,
+                service: serviceToBook.name,
+                date: new Date(manualForm.date).toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' }),
+                time: timeToBook
+            });
+            const body = encodeURIComponent(bodyContent);
+            window.location.href = `mailto:${manualForm.customerEmail}?subject=${subject}&body=${body}`;
+        }
+
         alert(t('owner.schedule.bookingAdded'));
-        setManualForm({ ...manualForm, customerName: '', customerEmail: '' });
+        setManualForm({ ...manualForm, customerName: '', customerEmail: '', customDescription: '', serviceId: services[0]?.id || '', sendEmail: false });
         setScheduleSubTab('view');
     };
 
@@ -190,7 +303,30 @@ const OwnerView: React.FC = () => {
         const body = encodeURIComponent(bodyContent);
 
         // Open owner's system email client
-        window.location.href = `mailto:${req.customerEmail}?subject=${subject}&body=${body}`;
+        if (sendEmailOnAction) {
+            window.location.href = `mailto:${req.customerEmail}?subject=${subject}&body=${body}`;
+        }
+    };
+
+    const handleDeclineRequest = async (requestId: string) => {
+        const req = bookingRequests.find(r => r.id === requestId);
+        if (!req) return;
+
+        if (window.confirm("Are you sure you want to decline this booking request?")) {
+            await declineBookingRequest(requestId); // Assuming this is destructured from context
+
+            if (sendEmailOnAction) {
+                const subject = encodeURIComponent(t('owner.requests.rejectionSubject'));
+                const bodyContent = t('owner.requests.rejectionBody', {
+                    name: req.customerName,
+                    service: req.service.name,
+                    date: new Date(req.date).toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' }),
+                    time: req.time
+                });
+                const body = encodeURIComponent(bodyContent);
+                window.location.href = `mailto:${req.customerEmail}?subject=${subject}&body=${body}`;
+            }
+        }
     };
 
 
@@ -357,25 +493,144 @@ const OwnerView: React.FC = () => {
                                 <input type="email" required value={manualForm.customerEmail} onChange={e => setManualForm({ ...manualForm, customerEmail: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
                             </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="col-span-1">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="relative" ref={datePickerRef}>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.date')}</label>
-                                <input type="date" required value={manualForm.date} onChange={e => setManualForm({ ...manualForm, date: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
+                                <div
+                                    className="w-full p-3 border border-gray-300 rounded-xl focus-within:ring-2 focus-within:ring-pink-500 bg-white flex items-center justify-between cursor-pointer"
+                                    onClick={() => setShowDatePicker(!showDatePicker)}
+                                >
+                                    <span>{new Date(manualForm.date).toLocaleDateString(i18n.language, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                    <CalendarIcon className="h-5 w-5 text-gray-400" />
+                                </div>
+                                {showDatePicker && (
+                                    <div className="absolute top-full left-0 z-50 mt-2 w-full sm:w-[350px] shadow-2xl rounded-xl overflow-hidden">
+                                        <MonthlyCalendar
+                                            currentMonth={new Date(manualForm.date)}
+                                            setCurrentMonth={(d) => setManualForm({ ...manualForm, date: getLocalDateString(d) })} // Assuming currentMonth update isn't strictly needed for state, but navigating helps
+                                            selectedDate={new Date(manualForm.date)}
+                                            setSelectedDate={(d) => {
+                                                setManualForm({ ...manualForm, date: getLocalDateString(d) });
+                                                setShowDatePicker(false);
+                                            }}
+                                            bookings={[]} // Don't show bookings, focus on availability
+                                            availability={manualForm.useExistingAvailability ? availability : {}}
+                                        />
+                                    </div>
+                                )}
                             </div>
-                            <div className="col-span-1">
+                            <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.time')}</label>
-                                <input type="text" placeholder="09:00 AM" required value={manualForm.time} onChange={e => setManualForm({ ...manualForm, time: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
-                            </div>
-                            <div className="col-span-1">
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.service')}</label>
-                                <select value={manualForm.serviceId} onChange={e => setManualForm({ ...manualForm, serviceId: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none">
-                                    {services.map(s => <option key={s.id} value={s.id}>{s.name} (${s.price})</option>)}
-                                </select>
+                                {manualForm.serviceId !== 'other' && manualForm.useExistingAvailability ? (
+                                    <select
+                                        required
+                                        value={manualForm.time}
+                                        onChange={e => setManualForm({ ...manualForm, time: e.target.value })}
+                                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                                    >
+                                        <option value="">{t('owner.schedule.selectSlot')}</option>
+                                        {getCalculatedAvailableSlots(manualForm.date, services.find(s => s.id === manualForm.serviceId)!).map(slot => (
+                                            <option key={slot} value={slot}>{slot}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <input type="text" placeholder="09:00 AM" required value={manualForm.time} onChange={e => setManualForm({ ...manualForm, time: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
+                                )}
                             </div>
                         </div>
-                        <button type="submit" className="w-full bg-pink-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-pink-700 transition-colors">
-                            {t('owner.schedule.confirmAppointment')}
-                        </button>
+
+                        {manualForm.serviceId !== 'other' && (
+                            <div className="flex items-center gap-3 bg-blue-50 p-3 rounded-xl border border-blue-200">
+                                <div
+                                    className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 ease-in-out ${manualForm.useExistingAvailability ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                    onClick={() => setManualForm({ ...manualForm, useExistingAvailability: !manualForm.useExistingAvailability })}
+                                >
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${manualForm.useExistingAvailability ? 'translate-x-6' : 'translate-x-0'}`} />
+                                </div>
+                                <span className="text-sm font-bold text-gray-600">{t('owner.schedule.bookWithinAvailability')}</span>
+                            </div>
+                        )}
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('owner.schedule.service')}</label>
+                                <select
+                                    value={manualForm.serviceId}
+                                    onChange={(e) => setManualForm({ ...manualForm, serviceId: e.target.value })}
+                                    className="w-full p-3 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none appearance-none bg-white"
+                                >
+                                    {services.map(service => (
+                                        <option key={service.id} value={service.id}>{service.name}</option>
+                                    ))}
+                                    <option value="other">{t('owner.schedule.otherService')}</option>
+                                </select>
+                            </div>
+
+                            {manualForm.serviceId === 'other' && (
+                                <div className="space-y-4 animate-fadeIn">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('owner.schedule.description')}</label>
+                                        <input
+                                            type="text"
+                                            value={manualForm.customDescription}
+                                            onChange={(e) => setManualForm({ ...manualForm, customDescription: e.target.value })}
+                                            placeholder="e.g. Consultation"
+                                            className="w-full p-3 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('owner.schedule.startTime')}</label>
+                                            <select
+                                                value={manualForm.customStartTime}
+                                                onChange={(e) => setManualForm({ ...manualForm, customStartTime: e.target.value })}
+                                                className="w-full p-3 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                                            >
+                                                {Array.from({ length: 48 }).map((_, i) => {
+                                                    const h = Math.floor(i / 2);
+                                                    const m = i % 2 === 0 ? '00' : '30';
+                                                    const time = `${String(h).padStart(2, '0')}:${m}`;
+                                                    return <option key={time} value={time}>{time}</option>;
+                                                })}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('owner.schedule.endTime')}</label>
+                                            <select
+                                                value={manualForm.customEndTime}
+                                                onChange={(e) => setManualForm({ ...manualForm, customEndTime: e.target.value })}
+                                                className="w-full p-3 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                                            >
+                                                {Array.from({ length: 48 }).map((_, i) => {
+                                                    const h = Math.floor(i / 2);
+                                                    const m = i % 2 === 0 ? '00' : '30';
+                                                    const time = `${String(h).padStart(2, '0')}:${m}`;
+                                                    return <option key={time} value={time}>{time}</option>;
+                                                })}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                                <div
+                                    className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 ease-in-out ${manualForm.sendEmail ? 'bg-pink-600' : 'bg-gray-300'}`}
+                                    onClick={() => setManualForm({ ...manualForm, sendEmail: !manualForm.sendEmail })}
+                                >
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${manualForm.sendEmail ? 'translate-x-6' : 'translate-x-0'}`} />
+                                </div>
+                                <span className="text-sm font-bold text-gray-600">{t('owner.schedule.sendEmail')}</span>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                            >
+                                <PlusCircleIcon className="h-5 w-5" />
+                                {t('owner.schedule.confirmAppointment')}
+                            </button>
+                        </div>
                     </form>
                 </Card>
             )}
@@ -575,7 +830,7 @@ const OwnerView: React.FC = () => {
             <div className="grid grid-cols-4 gap-2 bg-gray-200 p-1 rounded-xl shadow-inner">
                 {[
                     { id: 'schedule', label: t('owner.tabs.schedule'), icon: CalendarIcon, badge: 0 },
-                    { id: 'requests', label: t('owner.tabs.requests'), icon: ClockIcon, badge: pendingRequestsCount },
+                    { id: 'requests', label: t('owner.tabs.requests'), icon: ClockIcon, badge: bookingRequests.length },
                     { id: 'clients', label: t('owner.tabs.clients'), icon: UsersIcon, badge: 0 },
                     { id: 'messages', label: t('owner.tabs.inbox'), icon: MailIcon, badge: unreadMessagesCount },
                     { id: 'ai', label: t('owner.ai.title'), icon: SparklesIcon, badge: 0 }
@@ -604,9 +859,22 @@ const OwnerView: React.FC = () => {
 
             {currentTab === 'requests' && (
                 <div className="space-y-4 max-w-2xl mx-auto">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-black text-gray-900">{t('owner.requests.pendingTitle')}</h2>
-                        <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-xs font-black">{bookingRequests.length} {t('owner.requests.total')}</span>
+                    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-xl font-black text-gray-900">{t('owner.requests.pendingTitle')}</h2>
+                            <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-xs font-black">{bookingRequests.length} {t('owner.requests.total')}</span>
+                        </div>
+
+                        <div className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('owner.requests.emailToggle')}</span>
+                            <button
+                                onClick={() => setSendEmailOnAction(!sendEmailOnAction)}
+                                className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${sendEmailOnAction ? 'bg-pink-600' : 'bg-gray-300'}`}
+                                title="Toggle Email Notifications"
+                            >
+                                <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${sendEmailOnAction ? 'translate-x-6' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
                     </div>
                     {bookingRequests.length > 0 ? bookingRequests.map(r => (
                         <Card key={r.id} className="p-6 flex justify-between items-center border-l-4 border-l-yellow-400 shadow-lg">
@@ -618,12 +886,20 @@ const OwnerView: React.FC = () => {
                                     <p className="text-xs text-gray-600 italic bg-gray-50 p-2 rounded-lg mt-2 border border-gray-100">"{r.customerNotes}"</p>
                                 )}
                             </div>
-                            <button
-                                onClick={() => handleApproveRequest(r.id)}
-                                className="bg-pink-600 hover:bg-pink-700 text-white px-6 py-2 rounded-xl text-sm font-black shadow-md transition-all active:scale-95"
-                            >
-                                {t('owner.requests.approveEmail')}
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleDeclineRequest(r.id)}
+                                    className="bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 px-4 py-2 rounded-xl text-sm font-black shadow-sm transition-all active:scale-95"
+                                >
+                                    {sendEmailOnAction ? t('owner.requests.declineEmail') : t('owner.requests.decline')}
+                                </button>
+                                <button
+                                    onClick={() => handleApproveRequest(r.id)}
+                                    className="bg-pink-600 hover:bg-pink-700 text-white px-6 py-2 rounded-xl text-sm font-black shadow-md transition-all active:scale-95"
+                                >
+                                    {sendEmailOnAction ? t('owner.requests.approveEmail') : t('owner.schedule.confirmAppointment')}
+                                </button>
+                            </div>
                         </Card>
                     )) : (
                         <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 shadow-inner">
@@ -643,6 +919,14 @@ const OwnerView: React.FC = () => {
                                 <div>
                                     <p className="font-bold text-gray-900">{c.name}</p>
                                     <p className="text-xs text-gray-500">{c.email}</p>
+                                    {c.phoneNumber && (
+                                        <div className="flex items-center gap-1 mt-1 text-xs font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded w-fit">
+                                            <PhoneIcon className="h-3 w-3" />
+                                            <a href={`tel:${c.phoneNumber}`} className="hover:text-pink-600 transition-colors">
+                                                {c.phoneNumber}
+                                            </a>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="pt-4 border-t border-gray-100">

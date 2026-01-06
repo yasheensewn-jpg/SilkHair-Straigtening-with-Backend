@@ -7,7 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { getLocalDateString } from '../utils/dateUtils';
 
 // Embedded API Key for seamless owner experience
-const API_KEY = "AIzaSyAok6yETYZmrXz6UisXlwRoUVc2n-iHs7Q";
+// Embedded API Key for seamless owner experience
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 const AIAssistant: React.FC = () => {
     const { t, i18n } = useTranslation();

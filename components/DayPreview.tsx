@@ -3,6 +3,7 @@ import { Booking } from '../types';
 import { ClockIcon, CutIcon, UserIcon, PencilIcon, TrashIcon, ChatBubbleIcon } from './icons/Icons';
 import Card from './ui/Card';
 import { useTranslation } from 'react-i18next';
+import { timeToMinutes, minutesToTime, calculateEndTime } from '../utils/timeUtils';
 
 interface DayPreviewProps {
     date: Date;
@@ -11,23 +12,6 @@ interface DayPreviewProps {
     onEditBooking: (booking: Booking) => void;
     onCancelBooking: (bookingId: string) => void;
 }
-
-const timeToMinutes = (timeStr: string): number => {
-    const [time, modifier] = timeStr.split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
-    if (hours === 12) hours = modifier === 'AM' ? 0 : 12;
-    else if (modifier === 'PM') hours += 12;
-    return hours * 60 + (minutes || 0);
-};
-
-const minutesToTime = (minutes: number): string => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    const hour12 = h % 12 === 0 ? 12 : h % 12;
-    const ampm = h >= 12 && h < 24 ? 'PM' : 'AM';
-    const paddedMinutes = m < 10 ? `0${m}` : String(m);
-    return `${hour12}:${paddedMinutes} ${ampm}`;
-};
 
 const DayPreview: React.FC<DayPreviewProps> = ({ date, bookings, availability, onEditBooking, onCancelBooking }) => {
     const { t, i18n } = useTranslation();
@@ -52,6 +36,10 @@ const DayPreview: React.FC<DayPreviewProps> = ({ date, bookings, availability, o
     const dateStr = date.toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' });
     const capitalizedDateStr = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
+    const sortedBookings = React.useMemo(() => {
+        return [...bookings].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+    }, [bookings]);
+
     return (
         <Card className="p-4 sm:p-6 h-full flex flex-col">
             <h3 className="text-xl font-black text-gray-900 mb-6 border-b border-gray-100 pb-4 first-letter:capitalize">
@@ -60,13 +48,14 @@ const DayPreview: React.FC<DayPreviewProps> = ({ date, bookings, availability, o
             <div className="space-y-6 flex-1 overflow-y-auto">
                 <div>
                     <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{t('owner.schedule.appointments')}</h4>
-                    {bookings.length > 0 ? (
+                    {sortedBookings.length > 0 ? (
                         <ul className="space-y-4">
-                            {bookings.map(b => (
+                            {sortedBookings.map(b => (
                                 <li key={b.id} className="p-4 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-pink-200 transition-colors">
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="flex items-center text-sm font-black text-pink-600 bg-pink-50 px-3 py-1 rounded-full">
-                                            <ClockIcon className="h-3 w-3 mr-1.5" /> {b.time}
+                                            <ClockIcon className="h-3 w-3 mr-1.5" />
+                                            {b.time} - {calculateEndTime(b.time, b.service.duration)}
                                         </div>
                                         <div className="flex gap-1">
                                             <button

@@ -50,11 +50,11 @@ interface AppContextType {
     authStatus: AuthStatus;
     currentUser: User | null;
     login: (email: string, pass: string) => Promise<void>;
-    signup: (email: string, pass: string, name: string) => Promise<void>;
+    signup: (email: string, pass: string, name: string, phoneNumber?: string) => Promise<void>;
     loginWithGoogle: () => Promise<void>;
     logout: () => void;
     resetPassword: (email: string) => void;
-    updateUserProfile: (name: string, photo: string) => Promise<void>;
+    updateUserProfile: (name: string, photo: string, phoneNumber?: string) => Promise<void>;
     deleteUserAccount: () => Promise<void>;
     verifyUserEmail: (email: string) => Promise<void>;
     services: Service[];
@@ -241,12 +241,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     };
 
-    const signup = async (email: string, pass: string, name: string) => {
+    const signup = async (email: string, pass: string, name: string, phoneNumber?: string) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
         const user = userCredential.user;
         const newClient: Client = {
             id: user.uid, name, email, password: '', role: 'user', lastSeen: new Date().toISOString(),
-            bookings: [], dob: '', emailVerified: false
+            bookings: [], dob: '', emailVerified: false, phoneNumber
         };
         await setDoc(doc(db, 'users', user.uid), newClient);
         await sendEmailVerification(user);
@@ -285,11 +285,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         alert(`Password reset link sent to ${email}`);
     };
 
-    const updateUserProfile = async (name: string, photo: string) => {
+    const updateUserProfile = async (name: string, photo: string, phoneNumber?: string) => {
         if (!currentUser) return;
         const userRef = doc(db, 'users', currentUser.id);
-        await updateDoc(userRef, { name, photo });
-        setCurrentUser(prev => prev ? { ...prev, name, photo } : null);
+        const updates: any = { name, photo };
+        if (phoneNumber !== undefined) updates.phoneNumber = phoneNumber;
+
+        await updateDoc(userRef, updates);
+        setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
     };
 
     const deleteUserAccount = async () => {
@@ -333,7 +336,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const addManualBooking = async (bookingDetails: Omit<Booking, 'id'>) => {
         const id = uuidv4();
-        const newBooking = { ...bookingDetails, id };
+        const newBooking: Booking = { ...bookingDetails, id }; // source is now passed in bookingDetails
         await setDoc(doc(db, 'bookings', id), newBooking);
     };
 
@@ -438,9 +441,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const SERVICE_DURATION = service.duration; // 240 mins (4 hours)
         const STAGGER_INTERVAL = 150; // 2.5 hours
 
-        // 3. Find existing bookings
-        const allBookingsOnDate = [...bookings, ...bookingRequests]
-            .filter(b => b.date === date)
+        const dateAvailability = availability[date];
+        if (!dateAvailability) return [];
+
+        const slots = [...dateAvailability];
+        // Filter out bookings that are manual ("source" === 'manual') so they don't block slots
+        const busySlots = bookings
+            .filter(b => b.date === date && b.source !== 'manual')
+            .map(b => b.time); // Simplifying: blocking exact start time. Real logic handles duration.
+
+        // Real logic: existing bookings
+        const dailyBookings = bookings.filter(b => b.date === date && b.source !== 'manual');
+        const dailyBookingRequests = bookingRequests.filter(b => b.date === date);
+
+        const allBookingsOnDate = [...dailyBookings, ...dailyBookingRequests]
             .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
         let proposedSlotMinutes: number;

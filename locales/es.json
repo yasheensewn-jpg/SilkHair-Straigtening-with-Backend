@@ -36,7 +36,9 @@
         "placeholderName": "Tu Nombre",
         "placeholderNameOwner": "Laura Assuncao",
         "placeholderEmail": "tu@ejemplo.com",
-        "placeholderEmailOwner": "owner@example.com"
+        "placeholderEmailOwner": "owner@example.com",
+        "phoneNumber": "Número de Celular (Opcional)",
+        "placeholderPhone": "ej: +34 600 000 000"
     },
     "common": {
         "welcome": "Alisado de Cabello Silky"
@@ -97,7 +99,13 @@
             "role": "Rol",
             "verifiedClient": "Cliente Verificado",
             "status": "Estado Modo Local",
-            "storage": "Almacenamiento de Datos del Navegador"
+            "storage": "Almacenamiento de Datos del Navegador",
+            "editProfile": "Editar Perfil",
+            "save": "Guardar Cambios",
+            "cancel": "Cancelar",
+            "name": "Nombre",
+            "email": "Email (No editable)",
+            "mobile": "Número de Celular"
         }
     },
     "cancelMessage": "Por favor, contacte directamente con el propietario para cancelar o reprogramar su cita.",
@@ -134,9 +142,14 @@
             "pendingTitle": "Solicitudes Pendientes",
             "total": "Total",
             "approveEmail": "Aprobar y Enviar Email",
+            "decline": "Rechazar",
+            "declineEmail": "Rechazar y Enviar Email",
+            "emailToggle": "Enviar Notificación por Email automáticamente",
             "noPending": "No hay solicitudes pendientes",
             "emailSubject": "Cita Confirmada - Alisado de Cabello Silky",
-            "emailBody": "Hola {{name}},\\n\\n¡Tu cita para {{service}} ha sido confirmada!\\n\\nDetalles:\\nFecha: {{date}}\\nHora: {{time}}\\n\\nTe esperamos en el salón.\\n\\nSaludos,\\nLaura Assuncao\\nAlisado de Cabello Silky"
+            "emailBody": "Hola {{name}},\\n\\n¡Tu cita para {{service}} ha sido confirmada!\\n\\nDetalles:\\nFecha: {{date}}\\nHora: {{time}}\\n\\nTe esperamos en el salón.\\n\\nSaludos,\\nLaura Assuncao\\nAlisado de Cabello Silky",
+            "rejectionSubject": "Actualización sobre su solicitud de cita",
+            "rejectionBody": "Hola {{name}},\\n\\nLamentablemente, la propietaria no puede atender su solicitud de cita para {{service}} el {{date}} a las {{time}}. Por favor, consulte el calendario para otros horarios disponibles."
         },
         "clients": {
             "privateNotes": "Notas Privadas",

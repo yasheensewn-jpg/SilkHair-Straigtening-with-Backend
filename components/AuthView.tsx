@@ -14,6 +14,7 @@ const AuthView: React.FC = () => {
     // Form State
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [password, setPassword] = useState('');
     const [repeatPassword, setRepeatPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -47,7 +48,7 @@ const AuthView: React.FC = () => {
                 if (password.length < 6) {
                     throw new Error(t('auth.errorLength'));
                 }
-                await signup(email, password, name);
+                await signup(email, password, name, phoneNumber);
                 // Switch to verification mode instead of logging in
                 setVerificationSentTo(email);
             }
@@ -108,6 +109,7 @@ const AuthView: React.FC = () => {
         setRepeatPassword('');
         setName('');
         setEmail('');
+        setPhoneNumber('');
         setVerificationSentTo(null);
     };
 
@@ -268,6 +270,22 @@ const AuthView: React.FC = () => {
                                 autoComplete="username email"
                             />
                         </div>
+
+                        {!isLoginMode && userType === 'client' && (
+                            <div>
+                                <label className="block text-sm font-bold text-gray-800 mb-1" htmlFor="phoneNumber">{t('auth.phoneNumber')}</label>
+                                <input
+                                    id="phoneNumber"
+                                    name="phoneNumber"
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    className="w-full p-3 border border-gray-400 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-black bg-white placeholder-gray-500"
+                                    placeholder={t('auth.placeholderPhone')}
+                                    autoComplete="tel"
+                                />
+                            </div>
+                        )}
 
                         {!isResetMode && (
                             <div>
