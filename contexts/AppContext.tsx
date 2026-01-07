@@ -427,54 +427,78 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     const getCalculatedAvailableSlots = useCallback((date: string, service: Service): string[] => {
-        const ownerSlotsForDate = availability[date] || [];
-        if (ownerSlotsForDate.length === 0) return [];
-
-        // 1. Parse all available start times (minutes)
-        const availabilityInMinutes = ownerSlotsForDate.map(timeToMinutes).sort((a, b) => a - b);
-
-        // 2. Determine Session boundaries
-        const dayStartTime = availabilityInMinutes[0];
-        // Implicitly 1 hour after the last available slot start time
-        const dayEndTime = availabilityInMinutes[availabilityInMinutes.length - 1] + 60;
-
-        const SERVICE_DURATION = service.duration; // 240 mins (4 hours)
-        const STAGGER_INTERVAL = 150; // 2.5 hours
-
         const dateAvailability = availability[date];
         if (!dateAvailability) return [];
 
-        const slots = [...dateAvailability];
-        // Filter out bookings that are manual ("source" === 'manual') so they don't block slots
-        const busySlots = bookings
-            .filter(b => b.date === date && b.source !== 'manual')
-            .map(b => b.time); // Simplifying: blocking exact start time. Real logic handles duration.
+        // 1. Prepare Availability Data
+        const ownerSlotsForDate = availability[date] || [];
+        const availabilityInMinutes = ownerSlotsForDate.map(timeToMinutes).sort((a, b) => a - b);
+        const dayStartTime = availabilityInMinutes[0];
 
+        // 2. Prepare Booking Data (Moved Up)
         // Real logic: existing bookings
         const dailyBookings = bookings.filter(b => b.date === date && b.source !== 'manual');
         const dailyBookingRequests = bookingRequests.filter(b => b.date === date);
 
+        // 0. Base Data
         const allBookingsOnDate = [...dailyBookings, ...dailyBookingRequests]
             .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
-        let proposedSlotMinutes: number;
+        // 3. Dynamic End Time Calculation
+        // A. Implied End from Grid: standard logic assumes slots are 1h blocks, so last slot + 60m = closing time.
+        const gridEndTime = availabilityInMinutes.length > 0 ? availabilityInMinutes[availabilityInMinutes.length - 1] + 60 : 0;
 
-        if (allBookingsOnDate.length === 0) {
-            // CASE 1: No bookings yet. Show FIRST available slot.
-            proposedSlotMinutes = dayStartTime;
-        } else {
-            // CASE 2: Stacked bookings. Show ONE slot: 2.5h after previous booking started.
-            const lastBookingStart = timeToMinutes(allBookingsOnDate[allBookingsOnDate.length - 1].time);
-            proposedSlotMinutes = lastBookingStart + STAGGER_INTERVAL;
+        // B. But if we have appointments that (legitimately) go past the grid, we must respect that.
+        const maxBookingEnd = allBookingsOnDate.reduce((max, b) => {
+            const end = timeToMinutes(b.time) + b.service.duration;
+            return end > max ? end : max;
+        }, 0);
+
+        const dayEndTime = Math.max(gridEndTime, maxBookingEnd);
+
+        // 3. Strict Sequential Traversal ("Book Down")
+        // Find the FIRST available slot that fits the Stagger Interval relative to existing bookings.
+        const STAGGER_INTERVAL = 150; // 2.5 hours
+        const SERVICE_DURATION = service.duration;
+
+        let currentProbe = dayStartTime;
+        let foundSlot: number | null = null;
+
+        // Safety Break: Don't loop forever. Max 24 hours.
+        while (currentProbe + SERVICE_DURATION <= dayEndTime) {
+            // Check for conflict with ANY existing booking
+            // A conflict exists if the probe overlaps or is too close (Stagger) to a booking
+            const confusingBooking = allBookingsOnDate.find(b => {
+                const bStart = timeToMinutes(b.time);
+                // "Too Close" = The absolute difference is less than STAGGER_INTERVAL.
+                // We strictly want: Probe must be at least STAGGER_INTERVAL away from bStart.
+                // NOTE: The user's rule implies the 'next' slot is determined by the *booking*.
+                // So if we are colliding with Booking A, we should jump to BookingA + Stagger.
+                return Math.abs(currentProbe - bStart) < STAGGER_INTERVAL;
+            });
+
+            if (confusingBooking) {
+                // We hit a booking! This time is invalid.
+                // The next POTENTIAL valid time is determined by this booking's start time + Stagger.
+                // We jump forward.
+                const nextHop = timeToMinutes(confusingBooking.time) + STAGGER_INTERVAL;
+
+                // CRITICAL: Ensure we actually move forward to avoid infinite loops
+                if (nextHop <= currentProbe) {
+                    // Should not happen with sorted data, but safety first:
+                    currentProbe += 15;
+                } else {
+                    currentProbe = nextHop;
+                }
+            } else {
+                // No conflict! compatible with all existing bookings.
+                // This is our slot.
+                foundSlot = currentProbe;
+                break; // Stop after finding the FIRST one.
+            }
         }
 
-        // 4. Validate Constraints
-        // Constraint: Must finish before the day session ends
-        if (proposedSlotMinutes + SERVICE_DURATION > dayEndTime) {
-            return []; // No valid slot remaining
-        }
-
-        return [minutesToTime(proposedSlotMinutes)];
+        return foundSlot !== null ? [minutesToTime(foundSlot)] : [];
     }, [availability, bookings, bookingRequests]);
 
     const ownerDefinedTimeSlots = generateTimeSlots();
