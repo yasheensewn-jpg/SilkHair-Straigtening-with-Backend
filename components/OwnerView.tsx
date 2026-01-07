@@ -470,6 +470,37 @@ const OwnerView: React.FC = () => {
                         {t('owner.schedule.manualBookingTitle')}
                     </h3>
                     <form onSubmit={handleManualBookingSubmit} className="space-y-6">
+                        <div className="space-y-4 mb-4">
+                            <div>
+                                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">{t('owner.schedule.service')}</label>
+                                <select
+                                    value={manualForm.serviceId}
+                                    onChange={(e) => setManualForm({ ...manualForm, serviceId: e.target.value })}
+                                    className="w-full p-3 border border-gray-300 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none appearance-none bg-white font-bold text-gray-700"
+                                >
+                                    {services.map(service => (
+                                        <option key={service.id} value={service.id}>{service.name}</option>
+                                    ))}
+                                    <option value="other">{t('owner.schedule.otherService')}</option>
+                                </select>
+                            </div>
+
+                            {manualForm.serviceId === 'other' && (
+                                <div className="space-y-4 animate-fadeIn">
+                                    <div>
+                                        <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">{t('owner.schedule.description')}</label>
+                                        <input
+                                            type="text"
+                                            value={manualForm.customDescription}
+                                            onChange={(e) => setManualForm({ ...manualForm, customDescription: e.target.value })}
+                                            placeholder="e.g. Consultation"
+                                            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                             <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">{t('owner.schedule.registeredClient')}</label>
                             <select
@@ -495,49 +526,94 @@ const OwnerView: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="relative" ref={datePickerRef}>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.date')}</label>
+                                <label className="block text-xs font-black text-gray-500 uppercase mb-1">{t('owner.schedule.date')}</label>
                                 <div
                                     className="w-full p-3 border border-gray-300 rounded-xl focus-within:ring-2 focus-within:ring-pink-500 bg-white flex items-center justify-between cursor-pointer"
                                     onClick={() => setShowDatePicker(!showDatePicker)}
                                 >
-                                    <span>{new Date(manualForm.date).toLocaleDateString(i18n.language, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                                    <CalendarIcon className="h-5 w-5 text-gray-400" />
+                                    <span className="font-medium text-gray-900">{new Date(manualForm.date).toLocaleDateString(i18n.language, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                    <CalendarIcon className="h-5 w-5 text-gray-500" />
                                 </div>
                                 {showDatePicker && (
                                     <div className="absolute top-full left-0 z-50 mt-2 w-full sm:w-[350px] shadow-2xl rounded-xl overflow-hidden">
                                         <MonthlyCalendar
                                             currentMonth={new Date(manualForm.date)}
-                                            setCurrentMonth={(d) => setManualForm({ ...manualForm, date: getLocalDateString(d) })} // Assuming currentMonth update isn't strictly needed for state, but navigating helps
+                                            setCurrentMonth={(d) => setManualForm({ ...manualForm, date: getLocalDateString(d) })}
                                             selectedDate={new Date(manualForm.date)}
                                             setSelectedDate={(d) => {
                                                 setManualForm({ ...manualForm, date: getLocalDateString(d) });
                                                 setShowDatePicker(false);
                                             }}
-                                            bookings={[]} // Don't show bookings, focus on availability
+                                            bookings={[]}
                                             availability={manualForm.useExistingAvailability ? availability : {}}
                                         />
                                     </div>
                                 )}
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{t('owner.schedule.time')}</label>
-                                {manualForm.serviceId !== 'other' && manualForm.useExistingAvailability ? (
-                                    <select
-                                        required
-                                        value={manualForm.time}
-                                        onChange={e => setManualForm({ ...manualForm, time: e.target.value })}
-                                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white"
-                                    >
-                                        <option value="">{t('owner.schedule.selectSlot')}</option>
-                                        {getCalculatedAvailableSlots(manualForm.date, services.find(s => s.id === manualForm.serviceId)!).map(slot => (
-                                            <option key={slot} value={slot}>{slot}</option>
-                                        ))}
-                                    </select>
-                                ) : (
-                                    <input type="text" placeholder="09:00 AM" required value={manualForm.time} onChange={e => setManualForm({ ...manualForm, time: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
-                                )}
-                            </div>
+
+                            {/* Time Input: Shows standard slot selector OR Custom Start/End if 'Other' */}
+                            {manualForm.serviceId !== 'other' ? (
+                                <div>
+                                    <label className="block text-xs font-black text-gray-500 uppercase mb-1">{t('owner.schedule.time')}</label>
+                                    {manualForm.useExistingAvailability ? (
+                                        <select
+                                            required
+                                            value={manualForm.time}
+                                            onChange={e => setManualForm({ ...manualForm, time: e.target.value })}
+                                            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none bg-white font-medium"
+                                        >
+                                            <option value="">{t('owner.schedule.selectSlot')}</option>
+                                            {getCalculatedAvailableSlots(manualForm.date, services.find(s => s.id === manualForm.serviceId)!).map(slot => (
+                                                <option key={slot} value={slot}>{slot}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input type="text" placeholder="09:00 AM" required value={manualForm.time} onChange={e => setManualForm({ ...manualForm, time: e.target.value })} className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" />
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="col-span-1">
+                                    {/* Placeholder to keep grid alignment or just empty if we move start/end here */}
+                                    <label className="block text-xs font-black text-gray-500 uppercase mb-1 opacity-0">Spacer</label>
+                                </div>
+                            )}
                         </div>
+
+                        {/* Custom Time Range for 'Other' - Moved here to be alongside Date/Time logic visually */}
+                        {manualForm.serviceId === 'other' && (
+                            <div className="grid grid-cols-2 gap-4 animate-fadeIn">
+                                <div>
+                                    <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">{t('owner.schedule.startTime')}</label>
+                                    <select
+                                        value={manualForm.customStartTime}
+                                        onChange={(e) => setManualForm({ ...manualForm, customStartTime: e.target.value })}
+                                        className="w-full p-3 border border-gray-300 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                                    >
+                                        {Array.from({ length: 48 }).map((_, i) => {
+                                            const h = Math.floor(i / 2);
+                                            const m = i % 2 === 0 ? '00' : '30';
+                                            const time = `${String(h).padStart(2, '0')}:${m}`;
+                                            return <option key={time} value={time}>{time}</option>;
+                                        })}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1">{t('owner.schedule.endTime')}</label>
+                                    <select
+                                        value={manualForm.customEndTime}
+                                        onChange={(e) => setManualForm({ ...manualForm, customEndTime: e.target.value })}
+                                        className="w-full p-3 border border-gray-300 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none bg-white"
+                                    >
+                                        {Array.from({ length: 48 }).map((_, i) => {
+                                            const h = Math.floor(i / 2);
+                                            const m = i % 2 === 0 ? '00' : '30';
+                                            const time = `${String(h).padStart(2, '0')}:${m}`;
+                                            return <option key={time} value={time}>{time}</option>;
+                                        })}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
 
                         {manualForm.serviceId !== 'other' && (
                             <div className="flex items-center gap-3 bg-blue-50 p-3 rounded-xl border border-blue-200">
@@ -554,64 +630,10 @@ const OwnerView: React.FC = () => {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('owner.schedule.service')}</label>
-                                <select
-                                    value={manualForm.serviceId}
-                                    onChange={(e) => setManualForm({ ...manualForm, serviceId: e.target.value })}
-                                    className="w-full p-3 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none appearance-none bg-white"
-                                >
-                                    {services.map(service => (
-                                        <option key={service.id} value={service.id}>{service.name}</option>
-                                    ))}
-                                    <option value="other">{t('owner.schedule.otherService')}</option>
-                                </select>
+
                             </div>
 
-                            {manualForm.serviceId === 'other' && (
-                                <div className="space-y-4 animate-fadeIn">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('owner.schedule.description')}</label>
-                                        <input
-                                            type="text"
-                                            value={manualForm.customDescription}
-                                            onChange={(e) => setManualForm({ ...manualForm, customDescription: e.target.value })}
-                                            placeholder="e.g. Consultation"
-                                            className="w-full p-3 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('owner.schedule.startTime')}</label>
-                                            <select
-                                                value={manualForm.customStartTime}
-                                                onChange={(e) => setManualForm({ ...manualForm, customStartTime: e.target.value })}
-                                                className="w-full p-3 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none bg-white"
-                                            >
-                                                {Array.from({ length: 48 }).map((_, i) => {
-                                                    const h = Math.floor(i / 2);
-                                                    const m = i % 2 === 0 ? '00' : '30';
-                                                    const time = `${String(h).padStart(2, '0')}:${m}`;
-                                                    return <option key={time} value={time}>{time}</option>;
-                                                })}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('owner.schedule.endTime')}</label>
-                                            <select
-                                                value={manualForm.customEndTime}
-                                                onChange={(e) => setManualForm({ ...manualForm, customEndTime: e.target.value })}
-                                                className="w-full p-3 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-pink-500 outline-none bg-white"
-                                            >
-                                                {Array.from({ length: 48 }).map((_, i) => {
-                                                    const h = Math.floor(i / 2);
-                                                    const m = i % 2 === 0 ? '00' : '30';
-                                                    const time = `${String(h).padStart(2, '0')}:${m}`;
-                                                    return <option key={time} value={time}>{time}</option>;
-                                                })}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+
 
                             <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
                                 <div

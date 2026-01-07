@@ -310,7 +310,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const q = query(bookingsRef, where('date', '==', requestDetails.date), where('time', '==', requestDetails.time));
         const querySnapshot = await getDocs(q);
 
-        if (!querySnapshot.empty) {
+        const hasConflict = querySnapshot.docs.some(doc => {
+            const booking = doc.data() as Booking;
+            // "Other" manual bookings (source === 'manual') are invisible/non-blocking for clients.
+            // Standard manual bookings (source === 'online') ARE blocking.
+            // Existing bookings with source === undefined are considered blocking (legacy).
+            return booking.source !== 'manual';
+        });
+
+        if (hasConflict) {
             throw new Error("This time slot is no longer available.");
         }
 
