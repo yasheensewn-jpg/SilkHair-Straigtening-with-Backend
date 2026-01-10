@@ -383,7 +383,7 @@ const UserView: React.FC = () => {
                     <Card className={`lg:col-span-1 flex-col bg-gray-50/50 ${selectedThreadId ? 'hidden lg:flex' : 'flex'}`}>
                         <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
                             <h2 className="font-black text-gray-900">{t('user.inquiries.conversations')}</h2>
-                            <button onClick={() => setSelectedThreadId(null)} className="text-pink-600 hover:bg-pink-50 p-1 rounded-full"><PlusCircleIcon className="h-6 w-6" /></button>
+                            <button onClick={() => setSelectedThreadId('new')} className="text-pink-600 hover:bg-pink-50 p-1 rounded-full"><PlusCircleIcon className="h-6 w-6" /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto">
                             {emailThreads.map(thread => (
@@ -464,7 +464,10 @@ const UserView: React.FC = () => {
                             </>
                         ) : (
                             <div className="flex-1 p-8 overflow-y-auto">
-                                <h3 className="text-xl font-black mb-6">{t('user.inquiries.newInquiry')}</h3>
+                                <div className="flex items-center gap-2 mb-6">
+                                    <button onClick={() => setSelectedThreadId(null)} className="lg:hidden text-gray-400 mr-2 hover:bg-gray-100 p-1 rounded-full"><ChevronLeftIcon className="h-6 w-6" /></button>
+                                    <h3 className="text-xl font-black">{t('user.inquiries.newInquiry')}</h3>
+                                </div>
                                 <form onSubmit={handleSendInquiry} className="space-y-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{t('user.inquiries.subject')}</label>
