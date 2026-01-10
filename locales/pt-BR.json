@@ -203,5 +203,11 @@
             },
             "ownerNotesPrompt": "Notas do Proprietário para este agendamento:"
         }
+    },
+    "services": {
+        "1": {
+            "name": "Tratamento de Alisamento Capilar",
+            "description": "Nosso tratamento exclusivo para cabelos macios, sedosos e lisos."
+        }
     }
 }

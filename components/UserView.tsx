@@ -75,10 +75,32 @@ const UserView: React.FC = () => {
         const email = currentUser.email.toLowerCase();
         const todayStart = new Date().setHours(0, 0, 0, 0);
 
+        const sortChronological = (a: Booking, b: Booking) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateA !== dateB) return dateA - dateB;
+
+            // Time comparison (HH:MM AM/PM)
+            const toMinutes = (t: string) => {
+                const [time, mod] = t.split(' ');
+                let [h, m] = time.split(':').map(Number);
+                if (mod === 'PM' && h < 12) h += 12;
+                if (mod === 'AM' && h === 12) h = 0;
+                return h * 60 + m;
+            };
+            return toMinutes(a.time) - toMinutes(b.time);
+        };
+
         return {
-            pending: bookingRequests.filter(b => b.customerEmail.toLowerCase() === email),
-            upcoming: bookings.filter(b => b.customerEmail.toLowerCase() === email && new Date(b.date).getTime() >= todayStart),
-            past: bookings.filter(b => b.customerEmail.toLowerCase() === email && new Date(b.date).getTime() < todayStart)
+            pending: bookingRequests
+                .filter(b => b.customerEmail.toLowerCase() === email)
+                .sort(sortChronological),
+            upcoming: bookings
+                .filter(b => b.customerEmail.toLowerCase() === email && new Date(b.date).getTime() >= todayStart)
+                .sort(sortChronological),
+            past: bookings
+                .filter(b => b.customerEmail.toLowerCase() === email && new Date(b.date).getTime() < todayStart)
+                .sort((a, b) => sortChronological(b, a)) // Past: Recent first (Descending)
         };
     }, [bookings, bookingRequests, currentUser]);
 
@@ -147,10 +169,10 @@ const UserView: React.FC = () => {
                         {services.map(s => (
                             <Card key={s.id} className="p-8 cursor-pointer hover:border-pink-500 hover:shadow-lg transition-all border-2" onClick={() => setSelectedService(s)}>
                                 <div className="flex justify-between items-start mb-4">
-                                    <h3 className="text-xl font-bold text-gray-900">{s.name}</h3>
+                                    <h3 className="text-xl font-bold text-gray-900">{t(`services.${s.id}.name`, s.name)}</h3>
                                     <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-black">${s.price}</span>
                                 </div>
-                                <p className="text-gray-600 text-sm mb-6 leading-relaxed">{s.description}</p>
+                                <p className="text-gray-600 text-sm mb-6 leading-relaxed">{t(`services.${s.id}.description`, s.description)}</p>
                                 <div className="flex items-center text-xs font-bold text-gray-400 uppercase tracking-widest">
                                     <ClockIcon className="h-4 w-4 mr-2" /> {s.duration} {t('user.booking.minutes')}
                                 </div>
@@ -171,7 +193,7 @@ const UserView: React.FC = () => {
                     <div className="bg-gray-50 p-6 rounded-2xl mb-6 space-y-4 border border-gray-200">
                         <div className="flex justify-between border-b border-gray-200 pb-2">
                             <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">{t('user.booking.service')}</span>
-                            <span className="font-bold text-gray-900">{selectedService.name}</span>
+                            <span className="font-bold text-gray-900">{t(`services.${selectedService.id}.name`, selectedService.name)}</span>
                         </div>
                         <div className="flex justify-between border-b border-gray-200 pb-2">
                             <span className="text-gray-500 font-bold uppercase text-[10px] tracking-widest">{t('user.booking.date')}</span>

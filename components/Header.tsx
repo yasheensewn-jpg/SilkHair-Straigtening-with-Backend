@@ -78,7 +78,7 @@ const Header: React.FC = () => {
                     {currentUser && (
                         <>
                             <span className="text-sm font-medium text-slate-700 hidden sm:block">
-                                Welcome, <span className="font-bold">{currentUser.name.split(' ')[0]}</span>
+                                Welcome, <span className="font-bold">{(currentUser.name || 'User').split(' ')[0]}</span>
                             </span>
                             <button
                                 onClick={logout}

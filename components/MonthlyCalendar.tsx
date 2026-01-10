@@ -84,12 +84,16 @@ const MonthlyCalendar: React.FC<MonthlyCalendarProps> = ({ currentMonth, setCurr
                     const isSelected = getLocalDateString(selectedDate) === dateStr;
                     const bookingCount = bookingsByDate[dateStr] || 0;
                     const hasAvail = (availability[dateStr] || []).length > 0;
-                    const isToday = getLocalDateString(new Date()) === dateStr;
+                    const todayStr = getLocalDateString(new Date());
+                    const isToday = todayStr === dateStr;
+                    const isPast = dateStr < todayStr;
 
-                    // Style Logic: Prioritize Selection > Bookings > Availability > Default
+                    // Style Logic: Prioritize Past > Selection > Bookings > Availability > Default
                     let btnClass = 'h-14 w-full rounded-xl transition-all duration-200 text-sm flex flex-col items-center justify-center relative p-1 font-bold border-2 ';
 
-                    if (isSelected) {
+                    if (isPast) {
+                        btnClass += 'opacity-30 cursor-not-allowed bg-gray-50 text-gray-300 border-gray-100';
+                    } else if (isSelected) {
                         btnClass += 'bg-pink-600 text-white border-pink-700 shadow-md';
                     } else if (bookingCount > 0) {
                         // Bookings -> Indigo Theme
@@ -107,7 +111,12 @@ const MonthlyCalendar: React.FC<MonthlyCalendarProps> = ({ currentMonth, setCurr
                     }
 
                     return (
-                        <button key={dateStr} onClick={() => setSelectedDate(date)} className={btnClass}>
+                        <button
+                            key={dateStr}
+                            onClick={() => !isPast && setSelectedDate(date)}
+                            disabled={isPast}
+                            className={btnClass}
+                        >
                             <span className="text-lg">{date.getDate()}</span>
 
                             {/* Small Booking Count Badge */}

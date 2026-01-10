@@ -91,3 +91,4 @@ Thumbs.db
 dist
 dist-ssr
 .firebase
+.env.production

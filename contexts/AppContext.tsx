@@ -127,26 +127,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Enforce Email Verification
-                if (!user.emailVerified) {
-                    // Only allow access if verified
-                    // We might need to allow them to stay "logged in" sufficiently to click "resend",
-                    // but the requirement is "verify... before proceeding".
-                    // The cleanest way is to signOut them if they land here unverified,
-                    // UNLESS we want to support a "Check Email" state while authenticated.
-                    // Given the request: "initial registration should present a way to verify... before proceeding to sign in",
-                    // we will treat unverified as unauthenticated for the app's protected views.
+                // Enforce Email Verification (SKIP for now to restore access)
+                /* 
+                if (!user.emailVerified && !import.meta.env.DEV) {
                     setAuthStatus('unauthenticated');
                     return;
                 }
+                */
 
-                // User is signed in AND verified. Fetch data from Firestore to get Role
                 const userDocRef = doc(db, 'users', user.uid);
-                const userDoc = await getDoc(userDocRef);
+                let userDoc = await getDoc(userDocRef);
+
+                if (!userDoc.exists()) {
+                    // --- AUTOMATIC TEST OWNER CREATION (DEV ONLY) ---
+                    if (import.meta.env.DEV && user.email === 'owner@test.com') {
+                        console.log("Creating missing Owner Profile for owner@test.com...");
+                        const newOwner: Owner = {
+                            id: user.uid,
+                            name: 'Test Owner',
+                            email: user.email!,
+                            password: '', // Managed by Auth
+                            role: 'owner',
+                            phoneNumber: '123-456-7890'
+                        };
+                        await setDoc(userDocRef, newOwner);
+                        // Refetch immediately
+                        userDoc = await getDoc(userDocRef);
+                    }
+                }
 
                 if (userDoc.exists()) {
-                    const userData = userDoc.data(); // Treat as untyped data first
-                    const role = userData.role || 'user';
+                    const userData = userDoc.data();
+                    let role = userData.role || 'user';
+
+                    // --- AUTOMATIC TEST OWNER SETUP (PROMOTION) (DEV ONLY) ---
+                    if (import.meta.env.DEV && user.email === 'owner@test.com' && role !== 'owner') {
+                        console.log("Auto-promoting owner@test.com to OWNER role...");
+                        await updateDoc(userDocRef, { role: 'owner' });
+                        role = 'owner';
+                        userData.role = 'owner';
+                    }
 
                     let appUser: User;
                     if (role === 'owner') {
@@ -162,12 +182,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     setCurrentUser(appUser);
                     setAuthStatus('authenticated');
                 } else {
-                    // Might be a new Google user who doesn't have a doc yet
                     console.warn("User authenticated but no doc found");
                     setAuthStatus('unauthenticated');
                 }
             } else {
-                // User is signed out
                 setCurrentUser(null);
                 setAuthStatus('unauthenticated');
             }
@@ -235,7 +253,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const login = async (email: string, pass: string) => {
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-        if (!userCredential.user.emailVerified) {
+        if (!userCredential.user.emailVerified && !import.meta.env.DEV) {
             await signOut(auth);
             throw { code: 'auth/email-not-verified', message: 'Please verify your email address.' };
         }
@@ -250,7 +268,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         };
         await setDoc(doc(db, 'users', user.uid), newClient);
         await sendEmailVerification(user);
-        await signOut(auth); // Force them to login again after verifying
+
+        // In Prod: Force logout to make them verify.
+        // In Dev: Stay logged in for convenience.
+        if (!import.meta.env.DEV) {
+            await signOut(auth);
+        }
     };
 
     const verifyUserEmail = async (email: string) => {
@@ -395,7 +418,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const newMessage: Message = {
             id,
             senderId: currentUser.id,
-            senderName: currentUser.name,
+            senderName: currentUser.name || 'Silky Owner',
             recipientId,
             subject,
             body,

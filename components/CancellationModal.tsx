@@ -13,7 +13,6 @@ interface CancellationModalProps {
 
 const CancellationModal: React.FC<CancellationModalProps> = ({ isOpen, onClose, onConfirm, booking }) => {
     const { t } = useTranslation();
-    const [releaseSlot, setReleaseSlot] = useState(true);
 
     if (!isOpen || !booking) return null;
 
@@ -38,30 +37,11 @@ const CancellationModal: React.FC<CancellationModalProps> = ({ isOpen, onClose, 
                         <p className="text-xs text-gray-500 mt-1">{booking.customerEmail}</p>
                     </div>
 
-                    {/* Release Slot Toggle */}
-                    <div className="mb-8 flex items-start gap-3 bg-pink-50 p-4 rounded-xl border border-pink-100">
-                        <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                            <input
-                                type="checkbox"
-                                name="toggle"
-                                id="release-toggle"
-                                checked={releaseSlot}
-                                onChange={(e) => setReleaseSlot(e.target.checked)}
-                                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer peer checked:right-0 right-6 checked:border-pink-500"
-                            />
-                            <label
-                                htmlFor="release-toggle"
-                                className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors ${releaseSlot ? 'bg-pink-500' : 'bg-gray-300'}`}
-                            ></label>
-                        </div>
-                        <div>
-                            <label htmlFor="release-toggle" className="block font-bold text-gray-800 text-sm cursor-pointer select-none">
-                                {t('owner.actions.modal.releaseLabel')}
-                            </label>
-                            <p className="text-xs text-gray-600 mt-1 leading-snug">
-                                {t('owner.actions.modal.releaseDescription')}
-                            </p>
-                        </div>
+                    {/* Release Warning */}
+                    <div className="mb-8 bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-center">
+                        <p className="text-sm font-bold text-yellow-800">
+                            {t('owner.actions.modal.releaseWarning')}
+                        </p>
                     </div>
 
                     <div className="flex gap-3">
@@ -72,7 +52,17 @@ const CancellationModal: React.FC<CancellationModalProps> = ({ isOpen, onClose, 
                             {t('owner.actions.modal.backBtn')}
                         </button>
                         <button
-                            onClick={() => onConfirm(releaseSlot)}
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log("Confirm Cancellation Clicked");
+                                try {
+                                    await onConfirm(true);
+                                } catch (err) {
+                                    console.error("Error in onConfirm:", err);
+                                    alert("Error: " + String(err));
+                                }
+                            }}
                             className="flex-1 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-200"
                         >
                             {t('owner.actions.modal.confirmBtn')}

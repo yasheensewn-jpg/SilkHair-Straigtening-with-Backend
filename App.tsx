@@ -19,11 +19,20 @@ const App: React.FC = () => {
         }
 
         if (authStatus === 'unauthenticated') {
+            console.log("App: Rendering AuthView");
             return <AuthView />;
         }
 
+        console.log("App: AuthStatus:", authStatus, "Role:", currentUser?.role);
+
         if (currentUser?.role === 'owner') {
-            return <OwnerView />;
+            console.log("App: Rendering OwnerView");
+            try {
+                return <OwnerView />;
+            } catch (e) {
+                console.error("CRASH in OwnerView:", e);
+                return <div className="p-10 text-red-600">OwnerView Crashed. Check Console.</div>;
+            }
         }
 
         if (currentUser?.role === 'user') {

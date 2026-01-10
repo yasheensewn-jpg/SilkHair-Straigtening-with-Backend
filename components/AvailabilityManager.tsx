@@ -166,14 +166,29 @@ const AvailabilityManager: React.FC = () => {
                         const hasAvail = (availability[dateStr] || []).length > 0;
                         const hasBookings = bookings.some(b => b.date === dateStr) || bookingRequests.some(r => r.date === dateStr);
 
+                        // Disable past dates
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const isPast = date < today;
+
                         let btnClass = 'h-10 w-10 rounded-lg transition-colors duration-200 text-sm flex items-center justify-center relative font-bold ';
-                        if (isSelected) btnClass += 'bg-pink-600 text-white shadow-lg';
-                        else btnClass += 'bg-white border border-gray-200 hover:bg-pink-100 text-gray-900';
+                        if (isPast) {
+                            btnClass += 'opacity-30 cursor-not-allowed bg-gray-50 text-gray-400 border border-gray-100';
+                        } else if (isSelected) {
+                            btnClass += 'bg-pink-600 text-white shadow-lg';
+                        } else {
+                            btnClass += 'bg-white border border-gray-200 hover:bg-pink-100 text-gray-900';
+                        }
 
                         return (
-                            <button key={dateStr} onClick={() => handleDayClick(dateStr)} className={btnClass}>
+                            <button
+                                key={dateStr}
+                                onClick={() => !isPast && handleDayClick(dateStr)}
+                                disabled={isPast}
+                                className={btnClass}
+                            >
                                 {date.getDate()}
-                                {hasAvail && !isSelected && (
+                                {hasAvail && !isSelected && !isPast && (
                                     <span className={`absolute bottom-1.5 h-1.5 w-1.5 rounded-full ${hasBookings ? 'bg-indigo-500' : 'bg-green-500'}`}></span>
                                 )}
                             </button>

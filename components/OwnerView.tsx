@@ -326,11 +326,12 @@ const OwnerView: React.FC = () => {
                 const body = encodeURIComponent(bodyContent);
                 window.location.href = `mailto:${req.customerEmail}?subject=${subject}&body=${body}`;
             }
-        }
+        };
     };
 
 
     const handleFinalizeCancellation = async (shouldReleaseSlot: boolean) => {
+        console.log("handleFinalizeCancellation called with:", shouldReleaseSlot);
         if (!cancellationBooking) return;
         const booking = cancellationBooking;
 

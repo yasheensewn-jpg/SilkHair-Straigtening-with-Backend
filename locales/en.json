@@ -209,8 +209,15 @@
                 "releaseLabel": "Release time slot?",
                 "releaseDescription": "Make this slot available for new bookings immediately.",
                 "confirmBtn": "Confirm Cancellation",
-                "backBtn": "Back"
+                "backBtn": "Back",
+                "releaseWarning": "Be aware this appointment slot will now be available to clients to request."
             }
+        }
+    },
+    "services": {
+        "1": {
+            "name": "Hair Straightening Treatment",
+            "description": "Our signature treatment for smooth, silky, and straight hair."
         }
     }
 }

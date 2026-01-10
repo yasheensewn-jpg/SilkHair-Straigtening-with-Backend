@@ -49,8 +49,11 @@ const AuthView: React.FC = () => {
                     throw new Error(t('auth.errorLength'));
                 }
                 await signup(email, password, name, phoneNumber);
-                // Switch to verification mode instead of logging in
-                setVerificationSentTo(email);
+
+                // Show verification screen only in Production
+                if (!import.meta.env.DEV) {
+                    setVerificationSentTo(email);
+                }
             }
         } catch (err: any) {
             if (isLoginMode) {
@@ -389,6 +392,7 @@ const AuthView: React.FC = () => {
                 {/* Helper for Credentials */}
 
             </Card>
+
         </div>
     );
 };

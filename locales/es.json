@@ -203,5 +203,11 @@
             },
             "ownerNotesPrompt": "Notas del propietario para esta cita:"
         }
+    },
+    "services": {
+        "1": {
+            "name": "Tratamiento de Alisado Capilar",
+            "description": "Nuestro tratamiento exclusivo para un cabello suave, sedoso y liso."
+        }
     }
 }

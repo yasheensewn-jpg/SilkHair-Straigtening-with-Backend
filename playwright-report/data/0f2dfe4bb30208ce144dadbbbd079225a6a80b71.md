@@ -1,0 +1,100 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e7]
+        - heading "Silky Hair Straightening" [level=1] [ref=e9]
+      - generic [ref=e10]:
+        - button "🇺🇸 EN" [ref=e12] [cursor=pointer]:
+          - generic [ref=e13]: 🇺🇸
+          - generic [ref=e14]: EN
+          - img [ref=e15]
+        - generic [ref=e17]: Welcome, User
+        - button "Logout" [ref=e18] [cursor=pointer]:
+          - img [ref=e19]
+          - generic [ref=e21]: Logout
+  - main [ref=e22]:
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - button "Schedule" [ref=e26] [cursor=pointer]:
+          - img [ref=e28]
+          - generic [ref=e30]: Schedule
+        - button "1 Requests" [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]:
+            - img [ref=e33]
+            - generic [ref=e35]: "1"
+          - generic [ref=e36]: Requests
+        - button "Clients" [ref=e37] [cursor=pointer]:
+          - img [ref=e39]
+          - generic [ref=e41]: Clients
+        - button "Inbox" [ref=e42] [cursor=pointer]:
+          - img [ref=e44]
+          - generic [ref=e46]: Inbox
+        - button "AI Assistant" [ref=e47] [cursor=pointer]:
+          - img [ref=e49]
+          - generic [ref=e51]: AI Assistant
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - button "Appointments" [ref=e54] [cursor=pointer]
+          - button "Availability" [ref=e55] [cursor=pointer]
+          - button "Add Booking" [ref=e56] [cursor=pointer]
+        - generic [ref=e57]:
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - button [ref=e60] [cursor=pointer]:
+                - img [ref=e61]
+              - heading "January 2026" [level=3] [ref=e63]
+              - button [ref=e64] [cursor=pointer]:
+                - img [ref=e65]
+            - generic [ref=e67]:
+              - generic [ref=e68]: S
+              - generic [ref=e69]: M
+              - generic [ref=e70]: T
+              - generic [ref=e71]: W
+              - generic [ref=e72]: T
+              - generic [ref=e73]: F
+              - generic [ref=e74]: S
+            - generic [ref=e75]:
+              - button "1" [ref=e80] [cursor=pointer]
+              - button "2" [ref=e81] [cursor=pointer]
+              - button "3" [ref=e82] [cursor=pointer]
+              - button "4" [ref=e83] [cursor=pointer]
+              - button "5" [ref=e84] [cursor=pointer]
+              - button "6" [ref=e85] [cursor=pointer]
+              - button "7" [ref=e86] [cursor=pointer]
+              - button "8" [ref=e87] [cursor=pointer]
+              - button "9" [ref=e88] [cursor=pointer]: "9"
+              - button "10" [ref=e90] [cursor=pointer]
+              - button "11" [ref=e91] [cursor=pointer]
+              - button "12" [ref=e92] [cursor=pointer]
+              - button "13" [ref=e93] [cursor=pointer]
+              - button "14" [ref=e94] [cursor=pointer]
+              - button "15" [ref=e95] [cursor=pointer]
+              - button "16" [ref=e96] [cursor=pointer]
+              - button "17" [ref=e97] [cursor=pointer]
+              - button "18" [ref=e98] [cursor=pointer]
+              - button "19" [ref=e99] [cursor=pointer]
+              - button "20" [ref=e100] [cursor=pointer]: "20"
+              - button "21" [ref=e102] [cursor=pointer]: "21"
+              - button "22" [ref=e104] [cursor=pointer]
+              - button "23" [ref=e105] [cursor=pointer]
+              - button "24" [ref=e106] [cursor=pointer]
+              - button "25" [ref=e107] [cursor=pointer]
+              - button "26" [ref=e108] [cursor=pointer]
+              - button "27" [ref=e109] [cursor=pointer]
+              - button "28" [active] [ref=e110] [cursor=pointer]
+              - button "29" [ref=e111] [cursor=pointer]
+              - button "30" [ref=e112] [cursor=pointer]
+              - button "31" [ref=e113] [cursor=pointer]
+            - generic [ref=e114]:
+              - generic [ref=e115]: Available
+              - generic [ref=e117]: Has Bookings
+          - generic [ref=e119]:
+            - heading "Selected Dates" [level=3] [ref=e120]
+            - paragraph [ref=e121]: Select dates from the calendar to set hours.
+  - contentinfo [ref=e122]:
+    - paragraph [ref=e123]: © 2026 Silky Hair Straightening. All rights reserved.
+```
